@@ -1,27 +1,33 @@
-import React, { useState } from 'react';
-import { UserGroupIcon, TrophyIcon, CalendarIcon, MapPinIcon } from '@heroicons/react/24/outline';
-import StoryCard from '../components/StoryCard';
-import { communityStories, mockUsers } from '../data/mockData';
-import { cn } from '../utils/cn';
+import { useState } from "react";
+import {
+  UserGroupIcon,
+  TrophyIcon,
+  CalendarIcon,
+  MapPinIcon,
+} from "@heroicons/react/24/outline";
+import StoryCard from "../components/StoryCard";
+import { communityStories, mockUsers } from "../data/mockData";
+import { cn } from "../utils/cn";
 
 export default function Community() {
-  const [activeTab, setActiveTab] = useState('stories');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [activeTab, setActiveTab] = useState("stories");
+  const [selectedCategory, setSelectedCategory] = useState("all");
 
   const tabs = [
-    { id: 'stories', name: 'Community Stories', icon: UserGroupIcon },
-    { id: 'volunteers', name: 'Volunteers', icon: UserGroupIcon },
-    { id: 'leaderboard', name: 'Leaderboard', icon: TrophyIcon },
-    { id: 'events', name: 'Events', icon: CalendarIcon },
+    { id: "stories", name: "Community Stories", icon: UserGroupIcon },
+    { id: "volunteers", name: "Volunteers", icon: UserGroupIcon },
+    { id: "leaderboard", name: "Leaderboard", icon: TrophyIcon },
+    { id: "events", name: "Events", icon: CalendarIcon },
   ];
 
-  const storyCategories = ['all', 'success', 'impact', 'community'];
+  const storyCategories = ["all", "success", "impact", "community"];
 
-  const filteredStories = selectedCategory === 'all' 
-    ? communityStories 
-    : communityStories.filter(story => story.category === selectedCategory);
+  const filteredStories =
+    selectedCategory === "all"
+      ? communityStories
+      : communityStories.filter((story) => story.category === selectedCategory);
 
-  const volunteers = mockUsers.filter(user => user.role === 'volunteer');
+  const volunteers = mockUsers.filter((user) => user.role === "volunteer");
 
   const leaderboard = mockUsers
     .sort((a, b) => b.stats.impactScore - a.stats.impactScore)
@@ -29,41 +35,49 @@ export default function Community() {
 
   const upcomingEvents = [
     {
-      id: '1',
-      title: 'Community Food Drive',
-      date: new Date('2024-02-15'),
-      location: 'Colombo Central Park',
-      description: 'Join us for a community food collection drive to help families in need.',
+      id: "1",
+      title: "Community Food Drive",
+      date: new Date("2024-02-15"),
+      location: "Colombo Central Park",
+      description:
+        "Join us for a community food collection drive to help families in need.",
       attendees: 45,
-      image: 'https://images.pexels.com/photos/6646918/pexels-photo-6646918.jpeg?auto=compress&cs=tinysrgb&w=800'
+      image:
+        "https://images.pexels.com/photos/6646918/pexels-photo-6646918.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
     {
-      id: '2',
-      title: 'Food Safety Workshop',
-      date: new Date('2024-02-20'),
-      location: 'Kandy Community Center',
-      description: 'Learn best practices for food handling and safety in donations.',
+      id: "2",
+      title: "Food Safety Workshop",
+      date: new Date("2024-02-20"),
+      location: "Kandy Community Center",
+      description:
+        "Learn best practices for food handling and safety in donations.",
       attendees: 28,
-      image: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=800'
+      image:
+        "https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
     {
-      id: '3',
-      title: 'Volunteer Appreciation Day',
-      date: new Date('2024-02-25'),
-      location: 'Galle Beach Resort',
-      description: 'Celebrating our amazing volunteers with food, fun, and recognition.',
+      id: "3",
+      title: "Volunteer Appreciation Day",
+      date: new Date("2024-02-25"),
+      location: "Galle Beach Resort",
+      description:
+        "Celebrating our amazing volunteers with food, fun, and recognition.",
       attendees: 67,
-      image: 'https://images.pexels.com/photos/1267320/pexels-photo-1267320.jpeg?auto=compress&cs=tinysrgb&w=800'
-    }
+      image:
+        "https://images.pexels.com/photos/1267320/pexels-photo-1267320.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
   ];
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">MealBridge Community</h1>
+            <h1 className="mb-2 text-3xl font-bold text-gray-900">
+              MealBridge Community
+            </h1>
             <p className="text-lg text-gray-600">
               Connect with fellow food heroes and share your impact stories
             </p>
@@ -71,22 +85,22 @@ export default function Community() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
         {/* Tabs */}
-        <div className="border-b border-gray-200 mb-8">
-          <nav className="-mb-px flex space-x-8">
+        <div className="mb-8 border-b border-gray-200">
+          <nav className="flex -mb-px space-x-8">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  'flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors',
+                  "flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors",
                   activeTab === tab.id
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? "border-primary-500 text-primary-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 )}
               >
-                <tab.icon className="h-5 w-5" />
+                <tab.icon className="w-5 h-5" />
                 <span>{tab.name}</span>
               </button>
             ))}
@@ -94,34 +108,36 @@ export default function Community() {
         </div>
 
         {/* Stories Tab */}
-        {activeTab === 'stories' && (
+        {activeTab === "stories" && (
           <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Community Stories</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">
+                Community Stories
+              </h2>
               <div className="flex space-x-2">
-                {storyCategories.map(category => (
+                {storyCategories.map((category) => (
                   <button
                     key={category}
                     onClick={() => setSelectedCategory(category)}
                     className={cn(
-                      'px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize',
+                      "px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize",
                       selectedCategory === category
-                        ? 'bg-primary-100 text-primary-800'
-                        : 'bg-white text-gray-600 hover:bg-gray-100'
+                        ? "bg-primary-100 text-primary-800"
+                        : "bg-white text-gray-600 hover:bg-gray-100"
                     )}
                   >
-                    {category === 'all' ? 'All Stories' : category}
+                    {category === "all" ? "All Stories" : category}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredStories.map((story) => (
                 <StoryCard
                   key={story.id}
                   story={story}
-                  onLike={(id) => console.log('Like story:', id)}
+                  onLike={(id) => console.log("Like story:", id)}
                 />
               ))}
             </div>
@@ -129,40 +145,50 @@ export default function Community() {
         )}
 
         {/* Volunteers Tab */}
-        {activeTab === 'volunteers' && (
+        {activeTab === "volunteers" && (
           <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Our Amazing Volunteers</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">
+                Our Amazing Volunteers
+              </h2>
               <button className="btn-primary">Become a Volunteer</button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {volunteers.map((volunteer) => (
                 <div key={volunteer.id} className="card">
-                  <div className="flex items-center space-x-4 mb-4">
-                    <div className="h-16 w-16 rounded-full bg-primary-100 flex items-center justify-center">
-                      <span className="text-primary-600 font-bold text-xl">
+                  <div className="flex items-center mb-4 space-x-4">
+                    <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary-100">
+                      <span className="text-xl font-bold text-primary-600">
                         {volunteer.name.charAt(0)}
                       </span>
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">{volunteer.name}</h3>
-                      <p className="text-sm text-gray-600">{volunteer.location}</p>
-                      <div className="flex items-center text-xs text-gray-500 mt-1">
-                        <CalendarIcon className="h-3 w-3 mr-1" />
+                      <h3 className="font-semibold text-gray-900">
+                        {volunteer.name}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {volunteer.location}
+                      </p>
+                      <div className="flex items-center mt-1 text-xs text-gray-500">
+                        <CalendarIcon className="w-3 h-3 mr-1" />
                         Joined {volunteer.joinedAt.toLocaleDateString()}
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-2 mb-4">
+                  <div className="mb-4 space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Volunteer Hours:</span>
-                      <span className="font-medium">{volunteer.stats.volunteersHours || 0}h</span>
+                      <span className="font-medium">
+                        {volunteer.stats.volunteersHours || 0}h
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Impact Score:</span>
-                      <span className="font-medium">{volunteer.stats.impactScore}</span>
+                      <span className="font-medium">
+                        {volunteer.stats.impactScore}
+                      </span>
                     </div>
                   </div>
 
@@ -170,7 +196,7 @@ export default function Community() {
                     {volunteer.stats.badges.map((badge) => (
                       <span
                         key={badge.id}
-                        className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
+                        className="inline-flex items-center px-2 py-1 text-xs font-medium text-yellow-800 bg-yellow-100 rounded-full"
                         title={badge.description}
                       >
                         {badge.icon} {badge.name}
@@ -184,36 +210,48 @@ export default function Community() {
         )}
 
         {/* Leaderboard Tab */}
-        {activeTab === 'leaderboard' && (
+        {activeTab === "leaderboard" && (
           <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Community Leaderboard</h2>
-              <select className="input-field w-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">
+                Community Leaderboard
+              </h2>
+              <select className="w-auto input-field">
                 <option>This Month</option>
                 <option>All Time</option>
                 <option>This Year</option>
               </select>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div className="overflow-hidden bg-white rounded-lg shadow-sm">
               <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">Top Contributors</h3>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Top Contributors
+                </h3>
               </div>
               <div className="divide-y divide-gray-200">
                 {leaderboard.map((user, index) => (
-                  <div key={user.id} className="px-6 py-4 flex items-center justify-between">
+                  <div
+                    key={user.id}
+                    className="flex items-center justify-between px-6 py-4"
+                  >
                     <div className="flex items-center space-x-4">
-                      <div className={cn(
-                        'flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm',
-                        index === 0 ? 'bg-yellow-100 text-yellow-800' :
-                        index === 1 ? 'bg-gray-100 text-gray-800' :
-                        index === 2 ? 'bg-orange-100 text-orange-800' :
-                        'bg-gray-50 text-gray-600'
-                      )}>
+                      <div
+                        className={cn(
+                          "flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm",
+                          index === 0
+                            ? "bg-yellow-100 text-yellow-800"
+                            : index === 1
+                            ? "bg-gray-100 text-gray-800"
+                            : index === 2
+                            ? "bg-orange-100 text-orange-800"
+                            : "bg-gray-50 text-gray-600"
+                        )}
+                      >
                         {index + 1}
                       </div>
-                      <div className="h-12 w-12 rounded-full bg-primary-100 flex items-center justify-center">
-                        <span className="text-primary-600 font-medium">
+                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary-100">
+                        <span className="font-medium text-primary-600">
                           {user.name.charAt(0)}
                         </span>
                       </div>
@@ -223,7 +261,9 @@ export default function Community() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-lg text-primary-600">{user.stats.impactScore}</p>
+                      <p className="text-lg font-bold text-primary-600">
+                        {user.stats.impactScore}
+                      </p>
                       <p className="text-xs text-gray-500">Impact Score</p>
                     </div>
                   </div>
@@ -234,54 +274,64 @@ export default function Community() {
         )}
 
         {/* Events Tab */}
-        {activeTab === 'events' && (
+        {activeTab === "events" && (
           <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Upcoming Events</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">
+                Upcoming Events
+              </h2>
               <button className="btn-primary">Create Event</button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {upcomingEvents.map((event) => (
-                <div key={event.id} className="card hover:shadow-lg transition-shadow">
-                  <div className="relative overflow-hidden rounded-lg mb-4">
+                <div
+                  key={event.id}
+                  className="transition-shadow card hover:shadow-lg"
+                >
+                  <div className="relative mb-4 overflow-hidden rounded-lg">
                     <img
                       src={event.image}
                       alt={event.title}
-                      className="w-full h-48 object-cover"
+                      className="object-cover w-full h-48"
                     />
-                    <div className="absolute top-2 right-2 bg-white rounded-lg px-2 py-1">
+                    <div className="absolute px-2 py-1 bg-white rounded-lg top-2 right-2">
                       <p className="text-xs font-medium text-gray-900">
-                        {event.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {event.date.toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
                       </p>
                     </div>
                   </div>
 
                   <div className="space-y-3">
-                    <h3 className="font-semibold text-gray-900 text-lg">{event.title}</h3>
-                    <p className="text-gray-600 text-sm">{event.description}</p>
-                    
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {event.title}
+                    </h3>
+                    <p className="text-sm text-gray-600">{event.description}</p>
+
                     <div className="space-y-2">
                       <div className="flex items-center text-sm text-gray-600">
-                        <CalendarIcon className="h-4 w-4 mr-2" />
-                        {event.date.toLocaleDateString('en-US', { 
-                          weekday: 'long', 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
+                        <CalendarIcon className="w-4 h-4 mr-2" />
+                        {event.date.toLocaleDateString("en-US", {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
                         })}
                       </div>
                       <div className="flex items-center text-sm text-gray-600">
-                        <MapPinIcon className="h-4 w-4 mr-2" />
+                        <MapPinIcon className="w-4 h-4 mr-2" />
                         {event.location}
                       </div>
                       <div className="flex items-center text-sm text-gray-600">
-                        <UserGroupIcon className="h-4 w-4 mr-2" />
+                        <UserGroupIcon className="w-4 h-4 mr-2" />
                         {event.attendees} attending
                       </div>
                     </div>
 
-                    <button className="btn-primary w-full">Join Event</button>
+                    <button className="w-full btn-primary">Join Event</button>
                   </div>
                 </div>
               ))}

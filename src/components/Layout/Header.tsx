@@ -1,14 +1,19 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Bars3Icon, XMarkIcon, BellIcon, UserCircleIcon } from '@heroicons/react/24/outline';
-import { cn } from '../../utils/cn';
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import {
+  Bars3Icon,
+  XMarkIcon,
+  BellIcon,
+  UserCircleIcon,
+} from "@heroicons/react/24/outline";
+import { cn } from "../../utils/cn";
 
 const navigation = [
-  { name: 'Home', href: '/' },
-  { name: 'Find Food', href: '/find-food' },
-  { name: 'Donate', href: '/donate' },
-  { name: 'Community', href: '/community' },
-  { name: 'Impact', href: '/impact' },
+  { name: "Home", href: "/" },
+  { name: "Find Food", href: "/find-food" },
+  { name: "Donate", href: "/donate" },
+  { name: "Community", href: "/community" },
+  { name: "Impact", href: "/impact" },
 ];
 
 export default function Header() {
@@ -16,16 +21,18 @@ export default function Header() {
   const location = useLocation();
 
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-50">
-      <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" aria-label="Top">
-        <div className="flex h-16 items-center justify-between">
+    <header className="sticky top-0 z-50 bg-white shadow-sm">
+      <nav className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8" aria-label="Top">
+        <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
-              <div className="h-8 w-8 rounded-lg bg-primary-600 flex items-center justify-center">
-                <span className="text-white font-bold text-lg">M</span>
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary-600">
+                <span className="text-lg font-bold text-white">M</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">MealBridge</span>
+              <span className="text-xl font-bold text-gray-900">
+                MealBridge
+              </span>
             </Link>
           </div>
 
@@ -36,10 +43,10 @@ export default function Header() {
                 key={item.name}
                 to={item.href}
                 className={cn(
-                  'text-sm font-medium transition-colors duration-200',
+                  "text-sm font-medium transition-colors duration-200",
                   location.pathname === item.href
-                    ? 'text-primary-600 border-b-2 border-primary-600 pb-1'
-                    : 'text-gray-700 hover:text-primary-600'
+                    ? "text-primary-600 border-b-2 border-primary-600 pb-1"
+                    : "text-gray-700 hover:text-primary-600"
                 )}
               >
                 {item.name}
@@ -49,11 +56,19 @@ export default function Header() {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex md:items-center md:space-x-4">
-            <button className="p-2 text-gray-400 hover:text-gray-500 transition-colors">
-              <BellIcon className="h-6 w-6" />
+            <button
+              className="p-2 text-gray-400 transition-colors hover:text-gray-500"
+              aria-label="Notifications"
+              title="Notifications"
+            >
+              <BellIcon className="w-6 h-6" />
             </button>
-            <button className="p-2 text-gray-400 hover:text-gray-500 transition-colors">
-              <UserCircleIcon className="h-6 w-6" />
+            <button
+              className="p-2 text-gray-400 transition-colors hover:text-gray-500"
+              title="User Account"
+              aria-label="User Account"
+            >
+              <UserCircleIcon className="w-6 h-6" />
             </button>
             <Link to="/auth" className="btn-primary">
               Sign In
@@ -68,9 +83,9 @@ export default function Header() {
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               {mobileMenuOpen ? (
-                <XMarkIcon className="h-6 w-6" />
+                <XMarkIcon className="w-6 h-6" />
               ) : (
-                <Bars3Icon className="h-6 w-6" />
+                <Bars3Icon className="w-6 h-6" />
               )}
             </button>
           </div>
@@ -79,16 +94,16 @@ export default function Header() {
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
           <div className="md:hidden">
-            <div className="space-y-1 pb-3 pt-2">
+            <div className="pt-2 pb-3 space-y-1">
               {navigation.map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
                   className={cn(
-                    'block px-3 py-2 text-base font-medium transition-colors duration-200',
+                    "block px-3 py-2 text-base font-medium transition-colors duration-200",
                     location.pathname === item.href
-                      ? 'text-primary-600 bg-primary-50'
-                      : 'text-gray-700 hover:text-primary-600 hover:bg-gray-50'
+                      ? "text-primary-600 bg-primary-50"
+                      : "text-gray-700 hover:text-primary-600 hover:bg-gray-50"
                   )}
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -96,7 +111,10 @@ export default function Header() {
                 </Link>
               ))}
               <div className="px-3 py-2">
-                <Link to="/auth" className="btn-primary w-full text-center block">
+                <Link
+                  to="/auth"
+                  className="block w-full text-center btn-primary"
+                >
                   Sign In
                 </Link>
               </div>
