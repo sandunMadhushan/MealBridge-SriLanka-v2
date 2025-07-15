@@ -1,28 +1,45 @@
-import React, { useState } from 'react';
-import { MagnifyingGlassIcon, FunnelIcon, MapPinIcon } from '@heroicons/react/24/outline';
-import FoodCard from '../components/FoodCard';
-import { mockFoodListings, foodCategories } from '../data/mockData';
-import { cn } from '../utils/cn';
+import { useState } from "react";
+import {
+  MagnifyingGlassIcon,
+  FunnelIcon,
+  MapPinIcon,
+} from "@heroicons/react/24/outline";
+import FoodCard from "../components/FoodCard";
+import { mockFoodListings, foodCategories } from "../data/mockData";
+import { cn } from "../utils/cn";
 
 export default function FindFood() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedType, setSelectedType] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedType, setSelectedType] = useState("");
+  const [selectedLocation, setSelectedLocation] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
-  const locations = ['All Locations', 'Colombo', 'Kandy', 'Galle', 'Jaffna', 'Negombo'];
-  const types = ['All Types', 'Free', 'Half Price'];
+  const locations = [
+    "All Locations",
+    "Colombo",
+    "Kandy",
+    "Galle",
+    "Jaffna",
+    "Negombo",
+  ];
+  const types = ["All Types", "Free", "Half Price"];
 
-  const filteredListings = mockFoodListings.filter(listing => {
-    const matchesSearch = listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         listing.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !selectedCategory || listing.category.id === selectedCategory;
-    const matchesType = !selectedType || selectedType === 'All Types' || 
-                       (selectedType === 'Free' && listing.type === 'free') ||
-                       (selectedType === 'Half Price' && listing.type === 'half-price');
-    const matchesLocation = !selectedLocation || selectedLocation === 'All Locations' || 
-                           listing.pickupLocation.city === selectedLocation;
+  const filteredListings = mockFoodListings.filter((listing) => {
+    const matchesSearch =
+      listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      listing.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory =
+      !selectedCategory || listing.category.id === selectedCategory;
+    const matchesType =
+      !selectedType ||
+      selectedType === "All Types" ||
+      (selectedType === "Free" && listing.type === "free") ||
+      (selectedType === "Half Price" && listing.type === "half-price");
+    const matchesLocation =
+      !selectedLocation ||
+      selectedLocation === "All Locations" ||
+      listing.pickupLocation.city === selectedLocation;
 
     return matchesSearch && matchesCategory && matchesType && matchesLocation;
   });
@@ -33,7 +50,9 @@ export default function FindFood() {
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Find Food Near You</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Find Food Near You
+            </h1>
             <p className="text-lg text-gray-600">
               Discover fresh surplus food from your community
             </p>
@@ -70,7 +89,12 @@ export default function FindFood() {
                 </button>
               </div>
 
-              <div className={cn('space-y-6', showFilters ? 'block' : 'hidden lg:block')}>
+              <div
+                className={cn(
+                  "space-y-6",
+                  showFilters ? "block" : "hidden lg:block"
+                )}
+              >
                 {/* Location Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -82,8 +106,11 @@ export default function FindFood() {
                     onChange={(e) => setSelectedLocation(e.target.value)}
                     className="input-field"
                   >
-                    {locations.map(location => (
-                      <option key={location} value={location === 'All Locations' ? '' : location}>
+                    {locations.map((location) => (
+                      <option
+                        key={location}
+                        value={location === "All Locations" ? "" : location}
+                      >
                         {location}
                       </option>
                     ))}
@@ -92,13 +119,15 @@ export default function FindFood() {
 
                 {/* Type Filter */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Type
+                  </label>
                   <select
                     value={selectedType}
                     onChange={(e) => setSelectedType(e.target.value)}
                     className="input-field"
                   >
-                    {types.map(type => (
+                    {types.map((type) => (
                       <option key={type} value={type}>
                         {type}
                       </option>
@@ -108,28 +137,30 @@ export default function FindFood() {
 
                 {/* Category Filter */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Category</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Category
+                  </label>
                   <div className="space-y-2">
                     <button
-                      onClick={() => setSelectedCategory('')}
+                      onClick={() => setSelectedCategory("")}
                       className={cn(
-                        'w-full text-left px-3 py-2 rounded-lg text-sm transition-colors',
-                        !selectedCategory 
-                          ? 'bg-primary-100 text-primary-800' 
-                          : 'text-gray-600 hover:bg-gray-100'
+                        "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors",
+                        !selectedCategory
+                          ? "bg-primary-100 text-primary-800"
+                          : "text-gray-600 hover:bg-gray-100"
                       )}
                     >
                       All Categories
                     </button>
-                    {foodCategories.map(category => (
+                    {foodCategories.map((category) => (
                       <button
                         key={category.id}
                         onClick={() => setSelectedCategory(category.id)}
                         className={cn(
-                          'w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2',
+                          "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2",
                           selectedCategory === category.id
-                            ? 'bg-primary-100 text-primary-800'
-                            : 'text-gray-600 hover:bg-gray-100'
+                            ? "bg-primary-100 text-primary-800"
+                            : "text-gray-600 hover:bg-gray-100"
                         )}
                       >
                         <span>{category.icon}</span>
@@ -162,8 +193,8 @@ export default function FindFood() {
                   <FoodCard
                     key={listing.id}
                     listing={listing}
-                    onClaim={(id) => console.log('Claim:', id)}
-                    onRequest={(id) => console.log('Request:', id)}
+                    onClaim={(id) => console.log("Claim:", id)}
+                    onRequest={(id) => console.log("Request:", id)}
                   />
                 ))}
               </div>
@@ -172,16 +203,19 @@ export default function FindFood() {
                 <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-4xl">🔍</span>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No food items found</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  No food items found
+                </h3>
                 <p className="text-gray-600 mb-4">
-                  Try adjusting your search criteria or check back later for new listings.
+                  Try adjusting your search criteria or check back later for new
+                  listings.
                 </p>
                 <button
                   onClick={() => {
-                    setSearchTerm('');
-                    setSelectedCategory('');
-                    setSelectedType('');
-                    setSelectedLocation('');
+                    setSearchTerm("");
+                    setSelectedCategory("");
+                    setSelectedType("");
+                    setSelectedLocation("");
                   }}
                   className="btn-primary"
                 >
