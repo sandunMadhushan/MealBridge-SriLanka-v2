@@ -7,6 +7,9 @@ import {
   UserCircleIcon,
 } from "@heroicons/react/24/outline";
 import { cn } from "../../utils/cn";
+import { useAuth } from "../../context/AuthContext";
+import { signOut } from "firebase/auth";
+import { auth } from "../../firebase";
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -19,6 +22,7 @@ const navigation = [
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { user, loading } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm">
@@ -63,16 +67,27 @@ export default function Header() {
             >
               <BellIcon className="w-6 h-6" />
             </button>
-            <button
-              className="p-2 text-gray-400 transition-colors hover:text-gray-500"
-              title="User Account"
-              aria-label="User Account"
-            >
-              <UserCircleIcon className="w-6 h-6" />
-            </button>
-            <Link to="/auth" className="btn-primary">
-              Sign In
-            </Link>
+
+            {!loading && user ? (
+              <div className="flex items-center space-x-2">
+                <UserCircleIcon className="w-6 h-6 text-primary-600" />
+                <span className="font-medium text-gray-700">
+                  {user.displayName || user.email || "User"}
+                </span>
+                <button
+                  className="ml-2 btn-secondary"
+                  onClick={() => signOut(auth)}
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              !loading && (
+                <Link to="/auth" className="btn-primary">
+                  Sign In
+                </Link>
+              )
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -111,12 +126,32 @@ export default function Header() {
                 </Link>
               ))}
               <div className="px-3 py-2">
-                <Link
-                  to="/auth"
-                  className="block w-full text-center btn-primary"
-                >
-                  Sign In
-                </Link>
+                {/* Auth actions for mobile */}
+                {!loading && user ? (
+                  <div className="flex flex-col space-y-1">
+                    <span className="flex items-center justify-center space-x-2 font-medium text-gray-700">
+                      <UserCircleIcon className="inline w-5 h-5 text-primary-600" />
+                      <span>{user.displayName || user.email || "User"}</span>
+                    </span>
+                    <button
+                      className="w-full mt-1 btn-secondary"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        signOut(auth);
+                      }}
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                ) : (
+                  <Link
+                    to="/auth"
+                    className="block w-full text-center btn-primary"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Sign In
+                  </Link>
+                )}
               </div>
             </div>
           </div>

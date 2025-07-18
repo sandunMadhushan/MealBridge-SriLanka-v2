@@ -1,12 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   PhotoIcon,
   MapPinIcon,
   ClockIcon,
   ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
-import { foodCategories } from "../data/mockData";
 import { cn } from "../utils/cn";
+
+// --- FIREBASE IMPORTS ---
+import { db, storage } from "../firebase";
+import { collection, addDoc, Timestamp } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
+interface FoodCategory {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+}
 
 interface DonationForm {
   title: string;
@@ -33,6 +44,11 @@ interface DonationForm {
 
 export default function Donate() {
   const [currentStep, setCurrentStep] = useState(1);
+  const [foodCategories, setFoodCategories] = useState<FoodCategory[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const [form, setForm] = useState<DonationForm>({
     title: "",
     description: "",
@@ -55,6 +71,29 @@ export default function Donate() {
     },
     allergenInfo: [],
   });
+
+  // Load foodCategories from Firestore
+  useEffect(() => {
+    async function getCategories() {
+      try {
+        const { getDocs } = await import("firebase/firestore");
+        const qsnap = await getDocs(collection(db, "foodCategories"));
+        const docs = qsnap.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            name: data.name ?? "",
+            icon: data.icon ?? "",
+            color: data.color ?? "",
+          } as FoodCategory;
+        });
+        setFoodCategories(docs);
+      } catch (err) {
+        setFoodCategories([]);
+      }
+    }
+    getCategories();
+  }, []);
 
   const steps = [
     {
@@ -131,18 +170,92 @@ export default function Donate() {
   const nextStep = () => setCurrentStep((prev) => Math.min(prev + 1, 4));
   const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
 
-  const handleSubmit = () => {
-    console.log("Submitting donation:", form);
-    // Handle form submission
+  // --- UPDATED SUBMIT TO FIREBASE ---
+  const handleSubmit = async () => {
+    setSubmitSuccess(null);
+    setSubmitError(null);
+    setLoading(true);
+    try {
+      // Upload images to Firebase Storage
+      let imageUrls: string[] = [];
+      for (let img of form.images) {
+        const imgRef = ref(storage, `foodImages/${Date.now()}_${img.name}`);
+        await uploadBytes(imgRef, img);
+        const url = await getDownloadURL(imgRef);
+        imageUrls.push(url);
+      }
+
+      // Combine expiry date/time into a JS Date
+      // Example: 2025-07-20 + 16:30 => Date
+      let expiry = null;
+      if (form.expiryDate && form.expiryTime) {
+        expiry = new Date(`${form.expiryDate}T${form.expiryTime}:00`);
+      }
+
+      // Construct Firestore doc
+      const foodDoc = {
+        title: form.title,
+        description: form.description,
+        category: form.category,
+        quantity: form.quantity,
+        expiryDate: expiry ? Timestamp.fromDate(expiry) : null,
+        pickupLocation: {
+          address: form.address,
+          city: form.city,
+          district: form.district,
+        },
+        images: imageUrls,
+        type: form.type,
+        price: form.type === "half-price" ? parseFloat(form.price) : 0,
+        status: "available",
+        createdAt: Timestamp.now(),
+        deliveryRequested: form.deliveryAvailable,
+        safetyChecklist: form.safetyChecklist,
+        allergenInfo: form.allergenInfo,
+        // Optionally add donor id/user info here if you have auth
+      };
+
+      await addDoc(collection(db, "foodListings"), foodDoc);
+
+      setSubmitSuccess("Your food listing has been submitted!");
+      setCurrentStep(1);
+      setForm({
+        title: "",
+        description: "",
+        category: "",
+        quantity: "",
+        expiryDate: "",
+        expiryTime: "",
+        type: "free",
+        price: "",
+        address: "",
+        city: "",
+        district: "",
+        deliveryAvailable: false,
+        images: [],
+        safetyChecklist: {
+          freshness: false,
+          properStorage: false,
+          hygieneStandards: false,
+          labelingComplete: false,
+        },
+        allergenInfo: [],
+      });
+    } catch (err: any) {
+      setSubmitError(
+        "There was an error submitting your donation. " + err?.message
+      );
+    }
+    setLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <div className="max-w-4xl px-4 py-8 mx-auto sm:px-6 lg:px-8">
+          <div className="mb-8 text-center">
+            <h1 className="mb-2 text-3xl font-bold text-gray-900">
               Donate Surplus Food
             </h1>
             <p className="text-lg text-gray-600">
@@ -194,18 +307,29 @@ export default function Donate() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-sm p-8">
+      <div className="max-w-4xl px-4 py-8 mx-auto sm:px-6 lg:px-8">
+        <div className="p-8 bg-white rounded-lg shadow-sm">
+          {submitSuccess && (
+            <div className="px-4 py-2 mb-4 text-green-700 border border-green-200 rounded bg-green-50">
+              {submitSuccess}
+            </div>
+          )}
+          {submitError && (
+            <div className="px-4 py-2 mb-4 text-red-700 bg-red-100 border border-red-200 rounded">
+              {submitError}
+            </div>
+          )}
+
           {/* Step 1: Food Details */}
           {currentStep === 1 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              <h2 className="mb-6 text-xl font-semibold text-gray-900">
                 Food Details
               </h2>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block mb-2 text-sm font-medium text-gray-700">
                     Food Title *
                   </label>
                   <input
@@ -219,7 +343,7 @@ export default function Donate() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block mb-2 text-sm font-medium text-gray-700">
                     Category *
                   </label>
                   <select
@@ -241,7 +365,7 @@ export default function Donate() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block mb-2 text-sm font-medium text-gray-700">
                   Description *
                 </label>
                 <textarea
@@ -256,9 +380,9 @@ export default function Donate() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block mb-2 text-sm font-medium text-gray-700">
                     Quantity/Servings *
                   </label>
                   <input
@@ -274,7 +398,7 @@ export default function Donate() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block mb-2 text-sm font-medium text-gray-700">
                     Donation Type *
                   </label>
                   <div className="flex space-x-4">
@@ -308,7 +432,7 @@ export default function Donate() {
 
               {form.type === "half-price" && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block mb-2 text-sm font-medium text-gray-700">
                     Price (LKR) *
                   </label>
                   <input
@@ -323,11 +447,11 @@ export default function Donate() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block mb-2 text-sm font-medium text-gray-700">
                   Upload Photos *
                 </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-400 transition-colors">
-                  <PhotoIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <div className="p-6 text-center transition-colors border-2 border-gray-300 border-dashed rounded-lg hover:border-primary-400">
+                  <PhotoIcon className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                   <div className="text-sm text-gray-600">
                     <label
                       htmlFor="file-upload"
@@ -350,7 +474,7 @@ export default function Donate() {
                   </p>
                 </div>
                 {form.images.length > 0 && (
-                  <p className="text-sm text-green-600 mt-2">
+                  <p className="mt-2 text-sm text-green-600">
                     {form.images.length} image(s) selected
                   </p>
                 )}
@@ -361,14 +485,14 @@ export default function Donate() {
           {/* Step 2: Location & Pickup */}
           {currentStep === 2 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              <h2 className="mb-6 text-xl font-semibold text-gray-900">
                 Location & Pickup Details
               </h2>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <MapPinIcon className="inline h-4 w-4 mr-1" />
+                  <label className="block mb-2 text-sm font-medium text-gray-700">
+                    <MapPinIcon className="inline w-4 h-4 mr-1" />
                     Pickup Address *
                   </label>
                   <input
@@ -384,7 +508,7 @@ export default function Donate() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block mb-2 text-sm font-medium text-gray-700">
                     City *
                   </label>
                   <input
@@ -399,7 +523,7 @@ export default function Donate() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block mb-2 text-sm font-medium text-gray-700">
                   District *
                 </label>
                 <select
@@ -419,10 +543,10 @@ export default function Donate() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <ClockIcon className="inline h-4 w-4 mr-1" />
+                  <label className="block mb-2 text-sm font-medium text-gray-700">
+                    <ClockIcon className="inline w-4 h-4 mr-1" />
                     Expiry Date *
                   </label>
                   <input
@@ -438,7 +562,7 @@ export default function Donate() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block mb-2 text-sm font-medium text-gray-700">
                     Expiry Time *
                   </label>
                   <input
@@ -475,16 +599,16 @@ export default function Donate() {
           {/* Step 3: Safety & Quality */}
           {currentStep === 3 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">
-                <ShieldCheckIcon className="inline h-6 w-6 mr-2" />
+              <h2 className="mb-6 text-xl font-semibold text-gray-900">
+                <ShieldCheckIcon className="inline w-6 h-6 mr-2" />
                 Food Safety & Quality Assurance
               </h2>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <h3 className="font-medium text-blue-900 mb-2">
+              <div className="p-4 mb-6 border border-blue-200 rounded-lg bg-blue-50">
+                <h3 className="mb-2 font-medium text-blue-900">
                   Food Safety Guidelines
                 </h3>
-                <ul className="text-sm text-blue-800 space-y-1">
+                <ul className="space-y-1 text-sm text-blue-800">
                   <li>
                     • Ensure food is fresh and within safe consumption time
                   </li>
@@ -499,7 +623,7 @@ export default function Donate() {
               </div>
 
               <div>
-                <h3 className="font-medium text-gray-900 mb-4">
+                <h3 className="mb-4 font-medium text-gray-900">
                   Safety Checklist *
                 </h3>
                 <div className="space-y-3">
@@ -533,13 +657,13 @@ export default function Donate() {
               </div>
 
               <div>
-                <h3 className="font-medium text-gray-900 mb-4">
+                <h3 className="mb-4 font-medium text-gray-900">
                   Allergen Information
                 </h3>
-                <p className="text-sm text-gray-600 mb-3">
+                <p className="mb-3 text-sm text-gray-600">
                   Select any allergens present in the food:
                 </p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
                   {allergens.map((allergen) => (
                     <label key={allergen} className="flex items-center">
                       <input
@@ -559,12 +683,12 @@ export default function Donate() {
           {/* Step 4: Review & Submit */}
           {currentStep === 4 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              <h2 className="mb-6 text-xl font-semibold text-gray-900">
                 Review Your Donation
               </h2>
 
-              <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-6 space-y-4 rounded-lg bg-gray-50">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
                     <h3 className="font-medium text-gray-900">Food Details</h3>
                     <p className="text-sm text-gray-600">Title: {form.title}</p>
@@ -617,8 +741,8 @@ export default function Donate() {
                 )}
               </div>
 
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <h3 className="font-medium text-green-900 mb-2">
+              <div className="p-4 border border-green-200 rounded-lg bg-green-50">
+                <h3 className="mb-2 font-medium text-green-900">
                   Ready to Share!
                 </h3>
                 <p className="text-sm text-green-800">
@@ -646,12 +770,16 @@ export default function Donate() {
             </button>
 
             {currentStep < 4 ? (
-              <button onClick={nextStep} className="btn-primary px-6 py-2">
+              <button onClick={nextStep} className="px-6 py-2 btn-primary">
                 Next Step
               </button>
             ) : (
-              <button onClick={handleSubmit} className="btn-primary px-6 py-2">
-                Submit Donation
+              <button
+                onClick={handleSubmit}
+                className="px-6 py-2 btn-primary"
+                disabled={loading}
+              >
+                {loading ? "Submitting..." : "Submit Donation"}
               </button>
             )}
           </div>
