@@ -272,6 +272,8 @@ export default function FindFood() {
                   return (
                     <FoodCard
                       key={listing.id}
+                      foodCategories={foodCategories}
+                      users={users}
                       listing={{
                         ...listing,
                         category: displayCategory,
