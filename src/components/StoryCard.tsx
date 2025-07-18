@@ -9,6 +9,25 @@ interface StoryCardProps {
   liked?: boolean;
 }
 
+// Helper for robust date formatting (Firestore Timestamp, string, Date)
+function formatDate(val: any): string {
+  if (!val) return "";
+  if (typeof val === "string" || typeof val === "number") {
+    // string (possibly ISO) or timestamp as ms
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? "" : d.toLocaleDateString();
+  }
+  if (val.toDate && typeof val.toDate === "function") {
+    // Firestore Timestamp
+    const d = val.toDate();
+    return isNaN(d.getTime()) ? "" : d.toLocaleDateString();
+  }
+  if (val instanceof Date) {
+    return val.toLocaleDateString();
+  }
+  return "";
+}
+
 export default function StoryCard({
   story,
   onLike,
@@ -21,13 +40,13 @@ export default function StoryCard({
   };
 
   return (
-    <div className="card hover:shadow-lg transition-all duration-300">
+    <div className="transition-all duration-300 card hover:shadow-lg">
       {/* Image */}
-      <div className="relative overflow-hidden rounded-lg mb-4">
+      <div className="relative mb-4 overflow-hidden rounded-lg">
         <img
           src={story.images[0]}
           alt={story.title}
-          className="w-full h-48 object-cover"
+          className="object-cover w-full h-48"
         />
         <div className="absolute top-2 left-2">
           <span
@@ -43,17 +62,17 @@ export default function StoryCard({
 
       {/* Content */}
       <div className="space-y-3">
-        <h3 className="font-semibold text-gray-900 text-lg leading-tight">
+        <h3 className="text-lg font-semibold leading-tight text-gray-900">
           {story.title}
         </h3>
 
-        <p className="text-gray-600 text-sm line-clamp-3">{story.content}</p>
+        <p className="text-sm text-gray-600 line-clamp-3">{story.content}</p>
 
         {/* Author & Date */}
         <div className="flex items-center justify-between pt-2 border-t border-gray-100">
           <div className="flex items-center space-x-2">
-            <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center">
-              <span className="text-primary-600 font-medium text-sm">
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-100">
+              <span className="text-sm font-medium text-primary-600">
                 {story.author.name.charAt(0)}
               </span>
             </div>
@@ -62,8 +81,8 @@ export default function StoryCard({
                 {story.author.name}
               </p>
               <div className="flex items-center text-xs text-gray-500">
-                <CalendarIcon className="h-3 w-3 mr-1" />
-                {story.createdAt.toLocaleDateString()}
+                <CalendarIcon className="w-3 h-3 mr-1" />
+                {formatDate(story.createdAt)}
               </div>
             </div>
           </div>
@@ -71,12 +90,12 @@ export default function StoryCard({
           {/* Like Button */}
           <button
             onClick={() => onLike?.(story.id)}
-            className="flex items-center space-x-1 text-sm text-gray-500 hover:text-red-500 transition-colors"
+            className="flex items-center space-x-1 text-sm text-gray-500 transition-colors hover:text-red-500"
           >
             {liked ? (
-              <HeartSolidIcon className="h-4 w-4 text-red-500" />
+              <HeartSolidIcon className="w-4 h-4 text-red-500" />
             ) : (
-              <HeartIcon className="h-4 w-4" />
+              <HeartIcon className="w-4 h-4" />
             )}
             <span>{story.likes}</span>
           </button>
