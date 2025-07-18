@@ -9,8 +9,9 @@ import { cn } from "../utils/cn";
 
 // --- FIREBASE IMPORTS ---
 import { db, storage } from "../firebase";
-import { collection, addDoc, Timestamp } from "firebase/firestore";
+import { collection, addDoc, Timestamp, doc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useAuth } from "../context/AuthContext"; // <-- ADD THIS!
 
 interface FoodCategory {
   id: string;
@@ -71,6 +72,8 @@ export default function Donate() {
     },
     allergenInfo: [],
   });
+
+  const { user } = useAuth(); // <-- ADD THIS LINE
 
   // Load foodCategories from Firestore
   useEffect(() => {
@@ -185,18 +188,57 @@ export default function Donate() {
         imageUrls.push(url);
       }
 
-      // Combine expiry date/time into a JS Date
-      // Example: 2025-07-20 + 16:30 => Date
       let expiry = null;
       if (form.expiryDate && form.expiryTime) {
         expiry = new Date(`${form.expiryDate}T${form.expiryTime}:00`);
       }
 
-      // Construct Firestore doc
+      // *NEW*: Get category object
+      const categoryObj = foodCategories.find((c) => c.id === form.category);
+
+      // *NEW*: Robust Donor Info (gets name/email/id from users or auth)
+      let donorInfo = undefined;
+      if (user) {
+        try {
+          // Try to fetch from the "users" collection using user.uid
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const udata = userDoc.data();
+            donorInfo = {
+              id: user.uid,
+              email: user.email,
+              name: udata.name || user.displayName || user.email || "Anonymous",
+              stats: udata.stats || { donationsGiven: 0 },
+            };
+          } else {
+            donorInfo = {
+              id: user.uid,
+              email: user.email,
+              name: user.displayName || user.email || "Anonymous",
+              stats: { donationsGiven: 0 },
+            };
+          }
+        } catch {
+          donorInfo = {
+            id: user.uid,
+            email: user.email,
+            name: user.displayName || user.email || "Anonymous",
+            stats: { donationsGiven: 0 },
+          };
+        }
+      } else {
+        donorInfo = {
+          id: null,
+          email: null,
+          name: "Anonymous",
+          stats: { donationsGiven: 0 },
+        };
+      }
+
       const foodDoc = {
         title: form.title,
         description: form.description,
-        category: form.category,
+        category: categoryObj || form.category,
         quantity: form.quantity,
         expiryDate: expiry ? Timestamp.fromDate(expiry) : null,
         pickupLocation: {
@@ -212,7 +254,7 @@ export default function Donate() {
         deliveryRequested: form.deliveryAvailable,
         safetyChecklist: form.safetyChecklist,
         allergenInfo: form.allergenInfo,
-        // Optionally add donor id/user info here if you have auth
+        donor: donorInfo, // <-- this fixes the donor name issue!
       };
 
       await addDoc(collection(db, "foodListings"), foodDoc);
@@ -249,6 +291,7 @@ export default function Donate() {
     setLoading(false);
   };
 
+  // --- REST OF YOUR COMPONENT UNCHANGED ---
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
