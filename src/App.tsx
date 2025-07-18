@@ -7,6 +7,7 @@ import Donate from "./pages/Donate";
 import Community from "./pages/Community";
 import Impact from "./pages/Impact";
 import Auth from "./pages/Auth";
+import UploadMockDataPage from "./pages/UploadMockData";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
             <Route path="/community" element={<Community />} />
             <Route path="/impact" element={<Impact />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/uploadAllMockData" element={<UploadMockDataPage />} />
           </Routes>
         </main>
         <Footer />
