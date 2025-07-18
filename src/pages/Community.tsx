@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   UserGroupIcon,
   TrophyIcon,
@@ -6,10 +6,18 @@ import {
   MapPinIcon,
 } from "@heroicons/react/24/outline";
 import StoryCard from "../components/StoryCard";
-import { communityStories, mockUsers } from "../data/mockData";
 import { cn } from "../utils/cn";
 
+// Firebase
+import useCollection from "../hooks/useCollection";
+
 export default function Community() {
+  // Hooks to fetch Firestore collections
+  const { documents: communityStories = [], loading: storiesLoading } =
+    useCollection("communityStories");
+  const { documents: users = [], loading: usersLoading } =
+    useCollection("users");
+
   const [activeTab, setActiveTab] = useState("stories");
   const [selectedCategory, setSelectedCategory] = useState("all");
 
@@ -22,16 +30,28 @@ export default function Community() {
 
   const storyCategories = ["all", "success", "impact", "community"];
 
-  const filteredStories =
-    selectedCategory === "all"
-      ? communityStories
-      : communityStories.filter((story) => story.category === selectedCategory);
+  const filteredStories = useMemo(() => {
+    if (selectedCategory === "all") return communityStories;
+    return communityStories.filter(
+      (story: any) => story.category === selectedCategory
+    );
+  }, [selectedCategory, communityStories]);
 
-  const volunteers = mockUsers.filter((user) => user.role === "volunteer");
+  // Volunteers: users with role 'volunteer'
+  const volunteers = useMemo(
+    () => users.filter((user: any) => user.role === "volunteer"),
+    [users]
+  );
 
-  const leaderboard = mockUsers
-    .sort((a, b) => b.stats.impactScore - a.stats.impactScore)
-    .slice(0, 10);
+  // Leaderboard: top 10 by impactScore
+  const leaderboard = useMemo(() => {
+    return [...users]
+      .sort(
+        (a: any, b: any) =>
+          (b.stats?.impactScore || 0) - (a.stats?.impactScore || 0)
+      )
+      .slice(0, 10);
+  }, [users]);
 
   const upcomingEvents = [
     {
@@ -68,6 +88,14 @@ export default function Community() {
         "https://images.pexels.com/photos/1267320/pexels-photo-1267320.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
   ];
+
+  // Utility to handle Firestore Timestamp toDate() or fallbacks
+  function safeDate(val: any) {
+    if (!val) return "";
+    if (typeof val === "string") return new Date(val);
+    if (val.toDate) return val.toDate();
+    return new Date(val);
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -132,15 +160,19 @@ export default function Community() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {filteredStories.map((story) => (
-                <StoryCard
-                  key={story.id}
-                  story={story}
-                  onLike={(id) => console.log("Like story:", id)}
-                />
-              ))}
-            </div>
+            {storiesLoading ? (
+              <div>Loading stories...</div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {filteredStories.map((story: any) => (
+                  <StoryCard
+                    key={story.id}
+                    story={story}
+                    onLike={(id) => console.log("Like story:", id)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -154,58 +186,65 @@ export default function Community() {
               <button className="btn-primary">Become a Volunteer</button>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {volunteers.map((volunteer) => (
-                <div key={volunteer.id} className="card">
-                  <div className="flex items-center mb-4 space-x-4">
-                    <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary-100">
-                      <span className="text-xl font-bold text-primary-600">
-                        {volunteer.name.charAt(0)}
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">
-                        {volunteer.name}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        {volunteer.location}
-                      </p>
-                      <div className="flex items-center mt-1 text-xs text-gray-500">
-                        <CalendarIcon className="w-3 h-3 mr-1" />
-                        Joined {volunteer.joinedAt.toLocaleDateString()}
+            {usersLoading ? (
+              <div>Loading volunteers...</div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {volunteers.map((volunteer: any) => (
+                  <div key={volunteer.id} className="card">
+                    <div className="flex items-center mb-4 space-x-4">
+                      <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary-100">
+                        <span className="text-xl font-bold text-primary-600">
+                          {volunteer.name?.charAt(0)}
+                        </span>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">
+                          {volunteer.name}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          {volunteer.location}
+                        </p>
+                        <div className="flex items-center mt-1 text-xs text-gray-500">
+                          <CalendarIcon className="w-3 h-3 mr-1" />
+                          Joined{" "}
+                          {volunteer.joinedAt
+                            ? safeDate(volunteer.joinedAt).toLocaleDateString()
+                            : "—"}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="mb-4 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Volunteer Hours:</span>
-                      <span className="font-medium">
-                        {volunteer.stats.volunteersHours || 0}h
-                      </span>
+                    <div className="mb-4 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Volunteer Hours:</span>
+                        <span className="font-medium">
+                          {volunteer.stats?.volunteersHours || 0}h
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Impact Score:</span>
+                        <span className="font-medium">
+                          {volunteer.stats?.impactScore || 0}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Impact Score:</span>
-                      <span className="font-medium">
-                        {volunteer.stats.impactScore}
-                      </span>
-                    </div>
-                  </div>
 
-                  <div className="flex flex-wrap gap-1">
-                    {volunteer.stats.badges.map((badge) => (
-                      <span
-                        key={badge.id}
-                        className="inline-flex items-center px-2 py-1 text-xs font-medium text-yellow-800 bg-yellow-100 rounded-full"
-                        title={badge.description}
-                      >
-                        {badge.icon} {badge.name}
-                      </span>
-                    ))}
+                    <div className="flex flex-wrap gap-1">
+                      {(volunteer.stats?.badges || []).map((badge: any) => (
+                        <span
+                          key={badge.id}
+                          className="inline-flex items-center px-2 py-1 text-xs font-medium text-yellow-800 bg-yellow-100 rounded-full"
+                          title={badge.description}
+                        >
+                          {badge.icon} {badge.name}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -230,7 +269,7 @@ export default function Community() {
                 </h3>
               </div>
               <div className="divide-y divide-gray-200">
-                {leaderboard.map((user, index) => (
+                {leaderboard.map((user: any, index: number) => (
                   <div
                     key={user.id}
                     className="flex items-center justify-between px-6 py-4"
@@ -252,7 +291,7 @@ export default function Community() {
                       </div>
                       <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary-100">
                         <span className="font-medium text-primary-600">
-                          {user.name.charAt(0)}
+                          {user.name?.charAt(0)}
                         </span>
                       </div>
                       <div>
@@ -262,7 +301,7 @@ export default function Community() {
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-bold text-primary-600">
-                        {user.stats.impactScore}
+                        {user.stats?.impactScore || 0}
                       </p>
                       <p className="text-xs text-gray-500">Impact Score</p>
                     </div>
