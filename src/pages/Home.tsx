@@ -8,37 +8,42 @@ import {
 import ImpactCard from "../components/ImpactCard";
 import FoodCard from "../components/FoodCard";
 import StoryCard from "../components/StoryCard";
-import {
-  impactStats,
-  mockFoodListings,
-  communityStories,
-} from "../data/mockData";
+import { impactStats, communityStories } from "../data/mockData";
+import useCollection from "../hooks/useCollection"; // Add this if not already!
 
 export default function Home() {
-  const featuredListings = mockFoodListings.slice(0, 3);
-  const featuredStories = communityStories.slice(0, 2);
+  // Load everything from Firestore instead of mock data
+  const { documents: foodListings = [], loading: listingsLoading } =
+    useCollection("foodListings");
+  const { documents: foodCategories = [], loading: categoriesLoading } =
+    useCollection("foodCategories");
+  const { documents: users = [], loading: usersLoading } =
+    useCollection("users");
+
+  const featuredListings = foodListings.slice(0, 3); // Live top 3
+  const featuredStories = communityStories.slice(0, 2); // Keep stories mocked (unless you migrate these too)
 
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="hero-gradient text-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-20 text-white hero-gradient">
+        <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 animate-fade-in">
+            <h1 className="mb-6 text-4xl font-bold md:text-6xl animate-fade-in">
               Bridge the Gap Between
               <span className="block text-secondary-300">Surplus & Need</span>
             </h1>
-            <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto text-green-100 animate-slide-up">
+            <p className="max-w-3xl mx-auto mb-8 text-xl text-green-100 md:text-2xl animate-slide-up">
               Join Sri Lanka's youth-led movement to reduce food waste and fight
               hunger. Connect surplus food with those who need it most.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up">
-              <Link to="/find-food" className="btn-secondary text-lg px-8 py-3">
+            <div className="flex flex-col justify-center gap-4 sm:flex-row animate-slide-up">
+              <Link to="/find-food" className="px-8 py-3 text-lg btn-secondary">
                 Find Food Near You
               </Link>
               <Link
                 to="/donate"
-                className="btn-outline border-white text-white hover:bg-white hover:text-primary-600 text-lg px-8 py-3"
+                className="px-8 py-3 text-lg text-white border-white btn-outline hover:bg-white hover:text-primary-600"
               >
                 Donate Surplus Food
               </Link>
@@ -49,23 +54,23 @@ export default function Home() {
 
       {/* Impact Stats */}
       <section className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+        <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
+          <div className="mb-12 text-center">
+            <h2 className="mb-4 text-3xl font-bold text-gray-900">
               Our Community Impact
             </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <p className="max-w-2xl mx-auto text-lg text-gray-600">
               Together, we're making a real difference in reducing food waste
               and supporting communities across Sri Lanka.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             <ImpactCard
               title="Meals Shared"
               value={impactStats.totalMealsShared}
               subtitle="Nutritious meals distributed"
-              icon={<HeartIcon className="h-6 w-6" />}
+              icon={<HeartIcon className="w-6 h-6" />}
               color="primary"
               trend={{ value: 23, label: "vs last month" }}
             />
@@ -73,7 +78,7 @@ export default function Home() {
               title="Active Users"
               value={impactStats.totalUsersActive}
               subtitle="Community members"
-              icon={<UsersIcon className="h-6 w-6" />}
+              icon={<UsersIcon className="w-6 h-6" />}
               color="accent"
               trend={{ value: 15, label: "vs last month" }}
             />
@@ -81,7 +86,7 @@ export default function Home() {
               title="Food Waste Saved"
               value={`${impactStats.totalFoodWasteSaved}kg`}
               subtitle="Prevented from landfills"
-              icon={<GlobeAltIcon className="h-6 w-6" />}
+              icon={<GlobeAltIcon className="w-6 h-6" />}
               color="secondary"
               trend={{ value: 31, label: "vs last month" }}
             />
@@ -89,7 +94,7 @@ export default function Home() {
               title="CO₂ Reduced"
               value={`${impactStats.co2Saved}kg`}
               subtitle="Environmental impact"
-              icon={<GlobeAltIcon className="h-6 w-6" />}
+              icon={<GlobeAltIcon className="w-6 h-6" />}
               color="primary"
               trend={{ value: 18, label: "vs last month" }}
             />
@@ -99,23 +104,23 @@ export default function Home() {
 
       {/* How It Works */}
       <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+        <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
+          <div className="mb-12 text-center">
+            <h2 className="mb-4 text-3xl font-bold text-gray-900">
               How MealBridge Works
             </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <p className="max-w-2xl mx-auto text-lg text-gray-600">
               Simple steps to make a big impact in your community
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
             {/* Step 1 */}
             <div className="text-center">
-              <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-primary-100">
                 <span className="text-2xl">🍽️</span>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              <h3 className="mb-2 text-xl font-semibold text-gray-900">
                 List Surplus Food
               </h3>
               <p className="text-gray-600">
@@ -126,10 +131,10 @@ export default function Home() {
 
             {/* Step 2 */}
             <div className="text-center">
-              <div className="w-16 h-16 bg-secondary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-secondary-100">
                 <span className="text-2xl">🔍</span>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              <h3 className="mb-2 text-xl font-semibold text-gray-900">
                 Find & Request
               </h3>
               <p className="text-gray-600">
@@ -140,10 +145,10 @@ export default function Home() {
 
             {/* Step 3 */}
             <div className="text-center">
-              <div className="w-16 h-16 bg-accent-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-accent-100">
                 <span className="text-2xl">🚚</span>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              <h3 className="mb-2 text-xl font-semibold text-gray-900">
                 Pickup & Deliver
               </h3>
               <p className="text-gray-600">
@@ -157,10 +162,10 @@ export default function Home() {
 
       {/* Featured Food Listings */}
       <section className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-8">
+        <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              <h2 className="mb-2 text-3xl font-bold text-gray-900">
                 Available Food Near You
               </h2>
               <p className="text-gray-600">
@@ -169,46 +174,52 @@ export default function Home() {
             </div>
             <Link
               to="/find-food"
-              className="btn-outline flex items-center space-x-2"
+              className="flex items-center space-x-2 btn-outline"
             >
               <span>View All</span>
-              <ArrowRightIcon className="h-4 w-4" />
+              <ArrowRightIcon className="w-4 h-4" />
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredListings.map((listing) => (
-              <FoodCard
-                key={listing.id}
-                listing={listing}
-                onClaim={(id) => console.log("Claim:", id)}
-                onRequest={(id) => console.log("Request:", id)}
-              />
-            ))}
-          </div>
+          {listingsLoading || categoriesLoading || usersLoading ? (
+            <div className="py-12 text-center text-gray-500">Loading...</div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {featuredListings.map((listing) => (
+                <FoodCard
+                  key={listing.id}
+                  listing={listing}
+                  foodCategories={foodCategories}
+                  users={users}
+                  onClaim={(id) => console.log("Claim:", id)}
+                  onRequest={(id) => console.log("Request:", id)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
       {/* Community Stories */}
       <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-8">
+        <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              <h2 className="mb-2 text-3xl font-bold text-gray-900">
                 Community Stories
               </h2>
               <p className="text-gray-600">Real impact from real people</p>
             </div>
             <Link
               to="/community"
-              className="btn-outline flex items-center space-x-2"
+              className="flex items-center space-x-2 btn-outline"
             >
               <span>Read More</span>
-              <ArrowRightIcon className="h-4 w-4" />
+              <ArrowRightIcon className="w-4 h-4" />
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {featuredStories.map((story) => (
               <StoryCard
                 key={story.id}
@@ -221,26 +232,26 @@ export default function Home() {
       </section>
 
       {/* Call to Action */}
-      <section className="community-gradient text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold mb-4">
+      <section className="py-16 text-white community-gradient">
+        <div className="px-4 mx-auto text-center max-w-7xl sm:px-6 lg:px-8">
+          <h2 className="mb-4 text-3xl font-bold">
             Ready to Make a Difference?
           </h2>
-          <p className="text-xl mb-8 text-orange-100 max-w-2xl mx-auto">
+          <p className="max-w-2xl mx-auto mb-8 text-xl text-orange-100">
             Join thousands of Sri Lankans who are already part of the MealBridge
             community. Every meal shared is a step towards a more sustainable
             future.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col justify-center gap-4 sm:flex-row">
             <Link
               to="/auth"
-              className="btn-primary bg-white text-secondary-600 hover:bg-gray-100 text-lg px-8 py-3"
+              className="px-8 py-3 text-lg bg-white btn-primary text-secondary-600 hover:bg-gray-100"
             >
               Join MealBridge Today
             </Link>
             <Link
               to="/volunteer"
-              className="btn-outline border-white text-white hover:bg-white hover:text-secondary-600 text-lg px-8 py-3"
+              className="px-8 py-3 text-lg text-white border-white btn-outline hover:bg-white hover:text-secondary-600"
             >
               Become a Volunteer
             </Link>
