@@ -36,7 +36,7 @@ export default function FindFood() {
   // For today's reference date since you included one:
   // const now = new Date("2025-07-18T15:46:00+05:30");
   // To always use real time:
-  const now = new Date();
+  // const now = new Date();
 
   // Look up and fill category object if only id provided
   function getCategoryObj(categoryField: any) {
@@ -85,16 +85,16 @@ export default function FindFood() {
   }
 
   // Defensive expiry date conversion
-  function toDate(val: any): Date | null {
-    if (!val) return null;
-    if (val instanceof Date) return val;
-    if (val.toDate && typeof val.toDate === "function") return val.toDate();
-    if (typeof val === "string" || typeof val === "number") {
-      const d = new Date(val);
-      return isNaN(d.valueOf()) ? null : d;
-    }
-    return null;
-  }
+  // function toDate(val: any): Date | null {
+  //   if (!val) return null;
+  //   if (val instanceof Date) return val;
+  //   if (val.toDate && typeof val.toDate === "function") return val.toDate();
+  //   if (typeof val === "string" || typeof val === "number") {
+  //     const d = new Date(val);
+  //     return isNaN(d.valueOf()) ? null : d;
+  //   }
+  //   return null;
+  // }
 
   const filteredListings = useMemo(() => {
     return foodListings.filter((listing: any) => {
