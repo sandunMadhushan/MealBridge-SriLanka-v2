@@ -7,7 +7,7 @@ import {
   communityStories,
   impactStats,
 } from "../data/mockData";
-import { collection, setDoc, doc } from "firebase/firestore";
+import { setDoc, doc } from "firebase/firestore";
 
 // Converts Date objects to Firestore Timestamps or ISO strings, if needed
 function serialize(obj: any): any {
