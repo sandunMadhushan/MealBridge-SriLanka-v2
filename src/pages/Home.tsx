@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRightIcon,
@@ -9,30 +10,54 @@ import ImpactCard from "../components/ImpactCard";
 import FoodCard from "../components/FoodCard";
 import StoryCard from "../components/StoryCard";
 import useCollection from "../hooks/useCollection";
+import { db } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function Home() {
-  // Load Firestore data for food listings, categories, users, impact, stories
+  // Load Firestore data for food listings, categories, users, stories (collections)
   const { documents: foodListings = [], loading: listingsLoading } =
     useCollection("foodListings");
   const { documents: foodCategories = [], loading: categoriesLoading } =
     useCollection("foodCategories");
   const { documents: users = [], loading: usersLoading } =
     useCollection("users");
-  const { documents: impactDocs = [] } = useCollection("impactStats");
   const { documents: communityStories = [], loading: storiesLoading } =
     useCollection("communityStories");
 
-  // Pick top 3 for featured, top 2 for stories
-  const featuredListings = foodListings.slice(0, 3);
-  const featuredStories = communityStories.slice(0, 2);
-
-  // Use first impact document (aggregate) or fallback
-  const impactStats = impactDocs[0] || {
+  // --- Fetch impact stats from Firestore document stats/impact ---
+  const [impactStats, setImpactStats] = useState({
     totalMealsShared: 0,
     totalUsersActive: 0,
     totalFoodWasteSaved: 0,
     co2Saved: 0,
-  };
+  });
+  const [impactLoading, setImpactLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchImpactStats() {
+      setImpactLoading(true);
+      try {
+        const snap = await getDoc(doc(db, "stats", "impact"));
+        if (snap.exists()) {
+          const data = snap.data();
+          setImpactStats({
+            totalMealsShared: data.totalMealsShared || 0,
+            totalUsersActive: data.totalUsersActive || 0,
+            totalFoodWasteSaved: data.totalFoodWasteSaved || 0,
+            co2Saved: data.co2Saved || 0,
+          });
+        }
+      } catch (e) {
+        // Optionally handle error here
+      }
+      setImpactLoading(false);
+    }
+    fetchImpactStats();
+  }, []);
+
+  // Pick top 3 for featured, top 2 for stories
+  const featuredListings = foodListings.slice(0, 3);
+  const featuredStories = communityStories.slice(0, 2);
 
   return (
     <div className="min-h-screen">
@@ -78,7 +103,11 @@ export default function Home() {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             <ImpactCard
               title="Meals Shared"
-              value={impactStats.totalMealsShared?.toLocaleString?.() ?? "0"}
+              value={
+                impactLoading
+                  ? "..."
+                  : impactStats.totalMealsShared?.toLocaleString?.() ?? "0"
+              }
               subtitle="Nutritious meals distributed"
               icon={<HeartIcon className="w-6 h-6" />}
               color="primary"
@@ -86,7 +115,11 @@ export default function Home() {
             />
             <ImpactCard
               title="Active Users"
-              value={impactStats.totalUsersActive?.toLocaleString?.() ?? "0"}
+              value={
+                impactLoading
+                  ? "..."
+                  : impactStats.totalUsersActive?.toLocaleString?.() ?? "0"
+              }
               subtitle="Community members"
               icon={<UsersIcon className="w-6 h-6" />}
               color="accent"
@@ -95,7 +128,9 @@ export default function Home() {
             <ImpactCard
               title="Food Waste Saved"
               value={
-                impactStats.totalFoodWasteSaved
+                impactLoading
+                  ? "..."
+                  : impactStats.totalFoodWasteSaved
                   ? `${impactStats.totalFoodWasteSaved.toLocaleString()}kg`
                   : "0kg"
               }
@@ -107,7 +142,9 @@ export default function Home() {
             <ImpactCard
               title="CO₂ Reduced"
               value={
-                impactStats.co2Saved
+                impactLoading
+                  ? "..."
+                  : impactStats.co2Saved
                   ? `${impactStats.co2Saved.toLocaleString()}kg`
                   : "0kg"
               }
