@@ -139,13 +139,13 @@ export default function Donate() {
     "Matale",
     "Matara",
     "Monaragala",
+    "Mullaitivu",
     "Nuwara Eliya",
     "Polonnaruwa",
     "Puttalam",
     "Ratnapura",
     "Trincomalee",
     "Vavuniya",
-    "Mullaitivu",
   ];
   const allergens = [
     "Gluten",
