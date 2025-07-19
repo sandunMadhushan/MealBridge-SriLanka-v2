@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Bars3Icon,
   XMarkIcon,
@@ -22,7 +22,14 @@ const navigation = [
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, loading } = useAuth();
+
+  // Updated sign out function with redirect
+  const handleSignOut = async () => {
+    await signOut(auth);
+    navigate("/", { replace: true });
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm">
@@ -72,18 +79,13 @@ export default function Header() {
               <div className="flex items-center space-x-2">
                 <UserCircleIcon className="w-6 h-6 text-primary-600" />
                 <span className="font-medium text-gray-700">
-                  {/* Safe access below */}
                   {user.displayName || user.email || "User"}
                 </span>
-                <button
-                  className="ml-2 btn-secondary"
-                  onClick={() => signOut(auth)}
-                >
+                <button className="ml-2 btn-secondary" onClick={handleSignOut}>
                   Sign Out
                 </button>
               </div>
             ) : (
-              // Only show sign in when not loading
               !loading && (
                 <Link to="/auth" className="btn-primary">
                   Sign In
@@ -137,9 +139,9 @@ export default function Header() {
                     </span>
                     <button
                       className="w-full mt-1 btn-secondary"
-                      onClick={() => {
+                      onClick={async () => {
                         setMobileMenuOpen(false);
-                        signOut(auth);
+                        await handleSignOut();
                       }}
                     >
                       Sign Out

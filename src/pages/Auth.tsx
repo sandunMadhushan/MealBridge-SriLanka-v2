@@ -9,7 +9,7 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
 } from "firebase/auth";
-import { setDoc, doc, serverTimestamp } from "firebase/firestore";
+import { setDoc, doc, serverTimestamp, getDoc } from "firebase/firestore";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -81,14 +81,32 @@ export default function Auth() {
     try {
       if (isLogin) {
         // Firebase Sign In
-        await signInWithEmailAndPassword(
+        const userCredential = await signInWithEmailAndPassword(
           auth,
           formData.email,
           formData.password
         );
-        setLoading(false);
-        // Redirect to dashboard or another route
-        navigate("/dashboard"); // Change route as needed
+
+        // Fetch the user doc to get the exact role
+        const userDocRef = doc(db, "users", userCredential.user.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const role = userDoc.data().role;
+          setLoading(false);
+          // Redirect ONLY based on role (no fallback needed, as only these roles are valid)
+          if (role === "donor") {
+            navigate("/dashboard/donor");
+          } else if (role === "recipient") {
+            navigate("/dashboard/recipient");
+          } else if (role === "volunteer") {
+            navigate("/dashboard/volunteer");
+          } else {
+            setError("Invalid role. Please contact support.");
+          }
+        } else {
+          setLoading(false);
+          setError("User profile not found. Please contact support.");
+        }
       } else {
         // Registration
         if (formData.password !== formData.confirmPassword) {
