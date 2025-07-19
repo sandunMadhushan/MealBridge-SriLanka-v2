@@ -9,10 +9,10 @@ import ImpactCard from "../components/ImpactCard";
 import FoodCard from "../components/FoodCard";
 import StoryCard from "../components/StoryCard";
 import { impactStats, communityStories } from "../data/mockData";
-import useCollection from "../hooks/useCollection"; // Add this if not already!
+import useCollection from "../hooks/useCollection";
 
 export default function Home() {
-  // Load everything from Firestore instead of mock data
+  // Load Firestore data for food listings, categories, users
   const { documents: foodListings = [], loading: listingsLoading } =
     useCollection("foodListings");
   const { documents: foodCategories = [], loading: categoriesLoading } =
@@ -20,8 +20,8 @@ export default function Home() {
   const { documents: users = [], loading: usersLoading } =
     useCollection("users");
 
-  const featuredListings = foodListings.slice(0, 3); // Live top 3
-  const featuredStories = communityStories.slice(0, 2); // Keep stories mocked (unless you migrate these too)
+  const featuredListings = foodListings.slice(0, 3);
+  const featuredStories = communityStories.slice(0, 2);
 
   return (
     <div className="min-h-screen">
@@ -64,7 +64,6 @@ export default function Home() {
               and supporting communities across Sri Lanka.
             </p>
           </div>
-
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             <ImpactCard
               title="Meals Shared"
@@ -113,7 +112,6 @@ export default function Home() {
               Simple steps to make a big impact in your community
             </p>
           </div>
-
           <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
             {/* Step 1 */}
             <div className="text-center">
@@ -128,7 +126,6 @@ export default function Home() {
                 surplus food with photos, expiry times, and pickup details.
               </p>
             </div>
-
             {/* Step 2 */}
             <div className="text-center">
               <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-secondary-100">
@@ -142,7 +139,6 @@ export default function Home() {
                 need, and get matched with nearby donations.
               </p>
             </div>
-
             {/* Step 3 */}
             <div className="text-center">
               <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-accent-100">
