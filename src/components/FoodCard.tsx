@@ -12,6 +12,7 @@ interface FoodCardProps {
   users: any[];
   onClaim?: (id: string) => void;
   onRequest?: (id: string) => void;
+  onDelivery?: () => void;
 }
 
 function toDate(val: any): Date | null {
@@ -73,6 +74,7 @@ export default function FoodCard({
   users,
   onClaim,
   onRequest,
+  onDelivery,
 }: FoodCardProps) {
   const expiryDate = toDate(listing.expiryDate);
   const now = Date.now();
@@ -204,7 +206,13 @@ export default function FoodCard({
             </button>
           )}
           {listing.deliveryRequested && (
-            <button className="px-3 text-sm btn-outline">🚚 Delivery</button>
+            <button 
+              onClick={onDelivery}
+              className="px-3 text-sm btn-outline"
+              disabled={listing.status !== "available"}
+            >
+              🚚 Delivery
+            </button>
           )}
         </div>
       </div>

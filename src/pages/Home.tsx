@@ -208,6 +208,7 @@ export default function Home() {
                   users={users}
                   onClaim={(id) => console.log("Claim:", id)}
                   onRequest={(id) => console.log("Request:", id)}
+                  onDelivery={() => console.log("Delivery requested")}
                 />
               ))}
             </div>

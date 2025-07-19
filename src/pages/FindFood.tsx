@@ -7,6 +7,10 @@ import {
 import FoodCard from "../components/FoodCard";
 import { cn } from "../utils/cn";
 import useCollection from "../hooks/useCollection";
+import ClaimFoodModal from "../components/ClaimFoodModal";
+import RequestFoodModal from "../components/RequestFoodModal";
+import DeliveryModal from "../components/DeliveryModal";
+import { useAuth } from "../context/AuthContext";
 
 export default function FindFood() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -14,6 +18,14 @@ export default function FindFood() {
   const [selectedType, setSelectedType] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+
+  // Modal states
+  const [claimModalOpen, setClaimModalOpen] = useState(false);
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
+  const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
+  const [selectedListing, setSelectedListing] = useState<any>(null);
+
+  const { user } = useAuth();
 
   // LIVE DATA
   const { documents: foodListings = [], loading: listingsLoading } =
@@ -122,6 +134,33 @@ export default function FindFood() {
     selectedType,
     selectedLocation,
   ]);
+
+  const handleClaim = (listing: any) => {
+    if (!user) {
+      alert("Please sign in to claim food.");
+      return;
+    }
+    setSelectedListing(listing);
+    setClaimModalOpen(true);
+  };
+
+  const handleRequest = (listing: any) => {
+    if (!user) {
+      alert("Please sign in to request food.");
+      return;
+    }
+    setSelectedListing(listing);
+    setRequestModalOpen(true);
+  };
+
+  const handleDelivery = (listing: any) => {
+    if (!user) {
+      alert("Please sign in to request delivery.");
+      return;
+    }
+    setSelectedListing(listing);
+    setDeliveryModalOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -279,8 +318,9 @@ export default function FindFood() {
                         category: displayCategory,
                         donor: displayDonor,
                       }}
-                      onClaim={(id: string) => console.log("Claim:", id)}
-                      onRequest={(id: string) => console.log("Request:", id)}
+                      onClaim={() => handleClaim(listing)}
+                      onRequest={() => handleRequest(listing)}
+                      onDelivery={() => handleDelivery(listing)}
                     />
                   );
                 })}
@@ -313,6 +353,36 @@ export default function FindFood() {
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      {selectedListing && (
+        <>
+          <ClaimFoodModal
+            isOpen={claimModalOpen}
+            onClose={() => {
+              setClaimModalOpen(false);
+              setSelectedListing(null);
+            }}
+            listing={selectedListing}
+          />
+          <RequestFoodModal
+            isOpen={requestModalOpen}
+            onClose={() => {
+              setRequestModalOpen(false);
+              setSelectedListing(null);
+            }}
+            listing={selectedListing}
+          />
+          <DeliveryModal
+            isOpen={deliveryModalOpen}
+            onClose={() => {
+              setDeliveryModalOpen(false);
+              setSelectedListing(null);
+            }}
+            listing={selectedListing}
+          />
+        </>
+      )}
     </div>
   );
 }
