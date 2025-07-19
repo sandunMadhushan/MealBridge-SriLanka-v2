@@ -6,10 +6,15 @@ import {
   EnvelopeIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-import { cn } from "../utils/cn";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../firebase";
-import { collection, addDoc, doc, updateDoc, Timestamp } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  doc,
+  updateDoc,
+  Timestamp,
+} from "firebase/firestore";
 
 interface ClaimFoodModalProps {
   isOpen: boolean;
@@ -72,7 +77,9 @@ export default function ClaimFoodModal({
     }
 
     try {
-      const pickupDateTime = new Date(`${formData.pickupDate}T${formData.pickupTime}`);
+      const pickupDateTime = new Date(
+        `${formData.pickupDate}T${formData.pickupTime}`
+      );
 
       // Create claim record
       await addDoc(collection(db, "foodClaims"), {
@@ -113,7 +120,9 @@ export default function ClaimFoodModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
       <div className="w-full max-w-md bg-white rounded-lg shadow-xl">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Claim Free Food</h3>
+          <h3 className="text-lg font-semibold text-gray-900">
+            Claim Free Food
+          </h3>
           <button
             onClick={onClose}
             className="p-2 text-gray-400 hover:text-gray-600"
@@ -142,7 +151,9 @@ export default function ClaimFoodModal({
               <input
                 type="date"
                 value={formData.pickupDate}
-                onChange={(e) => handleInputChange("pickupDate", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("pickupDate", e.target.value)
+                }
                 min={new Date().toISOString().split("T")[0]}
                 className="input-field"
                 required
@@ -155,7 +166,9 @@ export default function ClaimFoodModal({
               <input
                 type="time"
                 value={formData.pickupTime}
-                onChange={(e) => handleInputChange("pickupTime", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("pickupTime", e.target.value)
+                }
                 className="input-field"
                 required
               />
@@ -173,7 +186,9 @@ export default function ClaimFoodModal({
                   type="radio"
                   value="phone"
                   checked={formData.contactMethod === "phone"}
-                  onChange={(e) => handleInputChange("contactMethod", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("contactMethod", e.target.value)
+                  }
                   className="mr-2"
                 />
                 <PhoneIcon className="w-4 h-4 mr-1" />
@@ -184,7 +199,9 @@ export default function ClaimFoodModal({
                   type="radio"
                   value="email"
                   checked={formData.contactMethod === "email"}
-                  onChange={(e) => handleInputChange("contactMethod", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("contactMethod", e.target.value)
+                  }
                   className="mr-2"
                 />
                 <EnvelopeIcon className="w-4 h-4 mr-1" />
@@ -248,7 +265,8 @@ export default function ClaimFoodModal({
                   Food Safety Reminder
                 </h5>
                 <p className="text-xs text-yellow-700">
-                  Please check food quality upon pickup and consume before expiry time.
+                  Please check food quality upon pickup and consume before
+                  expiry time.
                 </p>
               </div>
             </div>

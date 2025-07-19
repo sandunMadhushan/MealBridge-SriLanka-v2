@@ -7,7 +7,6 @@ import {
   CurrencyDollarIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
-import { cn } from "../utils/cn";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../firebase";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
@@ -91,7 +90,9 @@ export default function DeliveryModal({
     }
 
     try {
-      const deliveryDateTime = new Date(`${formData.deliveryDate}T${formData.deliveryTime}`);
+      const deliveryDateTime = new Date(
+        `${formData.deliveryDate}T${formData.deliveryTime}`
+      );
 
       // Create delivery request record
       await addDoc(collection(db, "deliveryRequests"), {
@@ -113,7 +114,9 @@ export default function DeliveryModal({
         createdAt: Timestamp.now(),
       });
 
-      setSuccess("Delivery request submitted! A volunteer will be assigned soon.");
+      setSuccess(
+        "Delivery request submitted! A volunteer will be assigned soon."
+      );
       setTimeout(() => {
         onClose();
       }, 2000);
@@ -160,7 +163,9 @@ export default function DeliveryModal({
             <input
               type="text"
               value={formData.deliveryAddress}
-              onChange={(e) => handleInputChange("deliveryAddress", e.target.value)}
+              onChange={(e) =>
+                handleInputChange("deliveryAddress", e.target.value)
+              }
               placeholder="Street address, building name, etc."
               className="input-field"
               required
@@ -228,7 +233,9 @@ export default function DeliveryModal({
               <input
                 type="date"
                 value={formData.deliveryDate}
-                onChange={(e) => handleInputChange("deliveryDate", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("deliveryDate", e.target.value)
+                }
                 min={new Date().toISOString().split("T")[0]}
                 className="input-field"
                 required
@@ -240,7 +247,9 @@ export default function DeliveryModal({
               </label>
               <select
                 value={formData.deliveryTime}
-                onChange={(e) => handleInputChange("deliveryTime", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("deliveryTime", e.target.value)
+                }
                 className="input-field"
                 required
               >
@@ -289,7 +298,9 @@ export default function DeliveryModal({
             </label>
             <textarea
               value={formData.specialInstructions}
-              onChange={(e) => handleInputChange("specialInstructions", e.target.value)}
+              onChange={(e) =>
+                handleInputChange("specialInstructions", e.target.value)
+              }
               placeholder="Building entrance, floor number, landmarks, etc."
               rows={3}
               className="input-field"
@@ -305,8 +316,8 @@ export default function DeliveryModal({
                   Volunteer Delivery
                 </h5>
                 <p className="text-xs text-blue-700">
-                  Our volunteers will handle the pickup and delivery. You'll receive
-                  tracking updates and volunteer contact details.
+                  Our volunteers will handle the pickup and delivery. You'll
+                  receive tracking updates and volunteer contact details.
                 </p>
               </div>
             </div>
