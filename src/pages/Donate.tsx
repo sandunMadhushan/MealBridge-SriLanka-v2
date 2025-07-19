@@ -6,12 +6,10 @@ import {
   ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 import { cn } from "../utils/cn";
-
-// --- FIREBASE IMPORTS ---
 import { db, storage } from "../firebase";
 import { collection, addDoc, Timestamp, doc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { useAuth } from "../context/AuthContext"; // <-- ADD THIS!
+import { useAuth } from "../context/AuthContext";
 
 interface FoodCategory {
   id: string;
@@ -49,6 +47,7 @@ export default function Donate() {
   const [loading, setLoading] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const [form, setForm] = useState<DonationForm>({
     title: "",
@@ -73,7 +72,7 @@ export default function Donate() {
     allergenInfo: [],
   });
 
-  const { user } = useAuth(); // <-- ADD THIS LINE
+  const { user } = useAuth();
 
   // Load foodCategories from Firestore
   useEffect(() => {
@@ -170,16 +169,73 @@ export default function Donate() {
     }
   };
 
-  const nextStep = () => setCurrentStep((prev) => Math.min(prev + 1, 4));
-  const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
+  function validateStep(step: number): string | null {
+    if (step === 1) {
+      if (!form.title.trim()) return "Food title is required.";
+      if (!form.category.trim()) return "Category is required.";
+      if (!form.description.trim()) return "Description is required.";
+      if (!form.quantity.trim()) return "Quantity/Servings is required.";
+      if (
+        form.type === "half-price" &&
+        (!form.price.trim() ||
+          isNaN(Number(form.price)) ||
+          Number(form.price) <= 0)
+      )
+        return "Price is required and must be greater than 0.";
+      if (!form.images.length) return "At least one image is required.";
+    }
+    if (step === 2) {
+      if (!form.address.trim()) return "Pickup address is required.";
+      if (!form.city.trim()) return "City is required.";
+      if (!form.district.trim()) return "District is required.";
+      if (!form.expiryDate.trim()) return "Expiry date is required.";
+      if (!form.expiryTime.trim()) return "Expiry time is required.";
+    }
+    if (step === 3) {
+      const checklist = form.safetyChecklist;
+      if (
+        !checklist.freshness ||
+        !checklist.properStorage ||
+        !checklist.hygieneStandards ||
+        !checklist.labelingComplete
+      ) {
+        return "All safety checklist items must be checked.";
+      }
+    }
+    return null;
+  }
 
-  // --- UPDATED SUBMIT TO FIREBASE ---
+  const nextStep = () => {
+    const error = validateStep(currentStep);
+    if (error) {
+      setValidationError(error);
+      return;
+    }
+    setValidationError(null);
+    setCurrentStep((prev) => Math.min(prev + 1, 4));
+  };
+
+  const prevStep = () => {
+    setValidationError(null);
+    setCurrentStep((prev) => Math.max(prev - 1, 1));
+  };
+
   const handleSubmit = async () => {
     setSubmitSuccess(null);
     setSubmitError(null);
     setLoading(true);
+
+    for (let s = 1; s <= 3; ++s) {
+      const error = validateStep(s);
+      if (error) {
+        setValidationError(error);
+        setLoading(false);
+        setCurrentStep(s);
+        return;
+      }
+    }
+
     try {
-      // Upload images to Firebase Storage
       let imageUrls: string[] = [];
       for (let img of form.images) {
         const imgRef = ref(storage, `foodImages/${Date.now()}_${img.name}`);
@@ -193,14 +249,11 @@ export default function Donate() {
         expiry = new Date(`${form.expiryDate}T${form.expiryTime}:00`);
       }
 
-      // *NEW*: Get category object
       const categoryObj = foodCategories.find((c) => c.id === form.category);
 
-      // *NEW*: Robust Donor Info (gets name/email/id from users or auth)
       let donorInfo = undefined;
       if (user) {
         try {
-          // Try to fetch from the "users" collection using user.uid
           const userDoc = await getDoc(doc(db, "users", user.uid));
           if (userDoc.exists()) {
             const udata = userDoc.data();
@@ -254,7 +307,7 @@ export default function Donate() {
         deliveryRequested: form.deliveryAvailable,
         safetyChecklist: form.safetyChecklist,
         allergenInfo: form.allergenInfo,
-        donor: donorInfo, // <-- this fixes the donor name issue!
+        donor: donorInfo,
       };
 
       await addDoc(collection(db, "foodListings"), foodDoc);
@@ -291,7 +344,6 @@ export default function Donate() {
     setLoading(false);
   };
 
-  // --- REST OF YOUR COMPONENT UNCHANGED ---
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -305,7 +357,6 @@ export default function Donate() {
               Share your surplus food with those who need it most
             </p>
           </div>
-
           {/* Progress Steps */}
           <div className="flex justify-center">
             <nav className="flex space-x-4" aria-label="Progress">
@@ -360,6 +411,11 @@ export default function Donate() {
           {submitError && (
             <div className="px-4 py-2 mb-4 text-red-700 bg-red-100 border border-red-200 rounded">
               {submitError}
+            </div>
+          )}
+          {validationError && (
+            <div className="px-4 py-2 mb-6 text-red-700 bg-red-100 border border-red-200 rounded">
+              {validationError}
             </div>
           )}
 
