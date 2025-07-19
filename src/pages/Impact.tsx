@@ -10,9 +10,19 @@ import ImpactCard from "../components/ImpactCard";
 import { useEffect, useState } from "react";
 import { db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
+// NEW: Import from Recharts
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
 
 export default function Impact() {
-  // Robust state with defaults
   const [impactStats, setImpactStats] = useState({
     co2Saved: 0,
     peopleReached: 0,
@@ -22,7 +32,6 @@ export default function Impact() {
     totalUsersActive: 0,
   });
 
-  // Fetch from Firestore: stats/impact document, always use safe spreading for types
   useEffect(() => {
     async function fetchStats() {
       try {
@@ -30,8 +39,8 @@ export default function Impact() {
         if (statsDoc.exists()) {
           const data = statsDoc.data();
           setImpactStats((prev) => ({
-            ...prev, // Fill any missing fields with default 0
-            ...data, // Overwrite with db values if present
+            ...prev,
+            ...data,
           }));
         }
       } catch (e) {
@@ -41,7 +50,6 @@ export default function Impact() {
     fetchStats();
   }, []);
 
-  // Unchanged static arrays (but with dynamic values plugged in)
   const environmentalImpact = [
     {
       label: "CO₂ Emissions Reduced",
@@ -78,6 +86,7 @@ export default function Impact() {
     },
   ];
 
+  // Chart data
   const monthlyData = [
     { month: "Jan", meals: 980, waste: 650 },
     { month: "Feb", meals: 1240, waste: 820 },
@@ -150,7 +159,6 @@ export default function Impact() {
               Lanka
             </p>
           </div>
-
           <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-3">
             {environmentalImpact.map((item, index) => (
               <div key={index} className="text-center card">
@@ -212,7 +220,6 @@ export default function Impact() {
               Building stronger, more connected communities through food sharing
             </p>
           </div>
-
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {socialImpact.map((item, index) => (
               <div key={index} className="text-center card">
@@ -229,7 +236,7 @@ export default function Impact() {
           </div>
         </section>
 
-        {/* Growth Chart */}
+        {/* Growth Chart (now a line chart) */}
         <section className="mb-12">
           <div className="card">
             <div className="flex items-center justify-between mb-6">
@@ -243,53 +250,38 @@ export default function Impact() {
               </div>
               <ChartBarIcon className="w-8 h-8 text-primary-600" />
             </div>
-
-            <div className="space-y-4">
-              {monthlyData.map((data) => (
-                <div key={data.month} className="flex items-center space-x-4">
-                  <div className="w-12 text-sm font-medium text-gray-600">
-                    {data.month}
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-full h-2 bg-gray-200 rounded-full">
-                        <div
-                          className="h-2 transition-all duration-500 rounded-full bg-primary-600"
-                          style={{ width: `${(data.meals / 2500) * 100}%` }}
-                        ></div>
-                      </div>
-                      <span className="w-16 text-sm text-gray-600">
-                        {data.meals} meals
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-full h-2 bg-gray-200 rounded-full">
-                        <div
-                          className="h-2 transition-all duration-500 rounded-full bg-secondary-600"
-                          style={{ width: `${(data.waste / 1600) * 100}%` }}
-                        ></div>
-                      </div>
-                      <span className="w-16 text-sm text-gray-600">
-                        {data.waste}kg saved
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            {/* --- Begin Line Chart --- */}
+            <div style={{ height: 300, width: "100%" }}>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart
+                  data={monthlyData}
+                  margin={{ top: 8, right: 24, left: 12, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="meals"
+                    name="Meals Shared"
+                    stroke="#2563eb"
+                    strokeWidth={3}
+                    dot={{ r: 5 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="waste"
+                    name="Waste Prevented (kg)"
+                    stroke="#f59e42"
+                    strokeWidth={3}
+                    dot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-
-            <div className="flex items-center justify-center pt-6 mt-6 space-x-6 border-t border-gray-200">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 rounded-full bg-primary-600"></div>
-                <span className="text-sm text-gray-600">Meals Shared</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 rounded-full bg-secondary-600"></div>
-                <span className="text-sm text-gray-600">
-                  Waste Prevented (kg)
-                </span>
-              </div>
-            </div>
+            {/* --- End Line Chart --- */}
           </div>
         </section>
 
