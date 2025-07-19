@@ -6,7 +6,6 @@ import {
   CreditCardIcon,
   DevicePhoneMobileIcon,
 } from "@heroicons/react/24/outline";
-import { cn } from "../utils/cn";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../firebase";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
@@ -70,7 +69,9 @@ export default function RequestFoodModal({
     }
 
     try {
-      const pickupDateTime = new Date(`${formData.pickupDate}T${formData.pickupTime}`);
+      const pickupDateTime = new Date(
+        `${formData.pickupDate}T${formData.pickupTime}`
+      );
 
       // Create request record
       await addDoc(collection(db, "foodRequests"), {
@@ -147,9 +148,11 @@ export default function RequestFoodModal({
           </div>
 
           {/* Total Price */}
-          <div className="p-3 border border-secondary-200 rounded-lg bg-secondary-50">
+          <div className="p-3 border rounded-lg border-secondary-200 bg-secondary-50">
             <div className="flex items-center justify-between">
-              <span className="font-medium text-secondary-900">Total Price:</span>
+              <span className="font-medium text-secondary-900">
+                Total Price:
+              </span>
               <span className="text-lg font-bold text-secondary-600">
                 LKR {totalPrice.toLocaleString()}
               </span>
@@ -166,7 +169,9 @@ export default function RequestFoodModal({
               <input
                 type="date"
                 value={formData.pickupDate}
-                onChange={(e) => handleInputChange("pickupDate", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("pickupDate", e.target.value)
+                }
                 min={new Date().toISOString().split("T")[0]}
                 className="input-field"
                 required
@@ -179,7 +184,9 @@ export default function RequestFoodModal({
               <input
                 type="time"
                 value={formData.pickupTime}
-                onChange={(e) => handleInputChange("pickupTime", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("pickupTime", e.target.value)
+                }
                 className="input-field"
                 required
               />
@@ -198,10 +205,12 @@ export default function RequestFoodModal({
                   type="radio"
                   value="cash"
                   checked={formData.paymentMethod === "cash"}
-                  onChange={(e) => handleInputChange("paymentMethod", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("paymentMethod", e.target.value)
+                  }
                   className="mr-3"
                 />
-                <span className="text-2xl mr-2">💵</span>
+                <span className="mr-2 text-2xl">💵</span>
                 <span>Cash on Pickup</span>
               </label>
               <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
@@ -209,7 +218,9 @@ export default function RequestFoodModal({
                   type="radio"
                   value="mobile"
                   checked={formData.paymentMethod === "mobile"}
-                  onChange={(e) => handleInputChange("paymentMethod", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("paymentMethod", e.target.value)
+                  }
                   className="mr-3"
                 />
                 <DevicePhoneMobileIcon className="w-5 h-5 mr-2" />
@@ -220,7 +231,9 @@ export default function RequestFoodModal({
                   type="radio"
                   value="card"
                   checked={formData.paymentMethod === "card"}
-                  onChange={(e) => handleInputChange("paymentMethod", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("paymentMethod", e.target.value)
+                  }
                   className="mr-3"
                 />
                 <CreditCardIcon className="w-5 h-5 mr-2" />
