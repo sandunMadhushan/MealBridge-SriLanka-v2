@@ -18,8 +18,7 @@ export default function Home() {
     useCollection("foodCategories");
   const { documents: users = [], loading: usersLoading } =
     useCollection("users");
-  const { documents: impactDocs = [], loading: impactLoading } =
-    useCollection("impactStats");
+  const { documents: impactDocs = [] } = useCollection("impactStats");
   const { documents: communityStories = [], loading: storiesLoading } =
     useCollection("communityStories");
 
