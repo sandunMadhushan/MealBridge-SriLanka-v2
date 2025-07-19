@@ -10,8 +10,6 @@ import { cn } from "../../utils/cn";
 import { useAuth } from "../../context/AuthContext";
 import { signOut } from "firebase/auth";
 import { auth } from "../../firebase";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../firebase";
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -25,33 +23,6 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const { user, loading } = useAuth();
-  const [userRole, setUserRole] = useState<string | null>(null);
-
-  // Fetch user role from Firestore
-  useEffect(() => {
-    const fetchUserRole = async () => {
-      if (user) {
-        try {
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (userDoc.exists()) {
-            setUserRole(userDoc.data().role);
-          }
-        } catch (error) {
-          console.error("Error fetching user role:", error);
-        }
-      }
-    };
-    fetchUserRole();
-  }, [user]);
-
-  const getDashboardLink = () => {
-    switch (userRole) {
-      case "donor": return "/dashboard/donor";
-      case "recipient": return "/dashboard/recipient";
-      case "volunteer": return "/dashboard/volunteer";
-      default: return "/dashboard/donor";
-    }
-  };
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm">
@@ -63,12 +34,9 @@ export default function Header() {
               <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary-600">
                 <span className="text-lg font-bold text-white">M</span>
               </div>
-              <Link 
-                to={getDashboardLink()}
-                className="font-medium text-gray-700 hover:text-primary-600"
-              >
-                {user.displayName || user.email || "User"}
-              </Link>
+              <span className="text-xl font-bold text-gray-900">
+                MealBridge
+              </span>
             </Link>
           </div>
 
@@ -104,6 +72,7 @@ export default function Header() {
               <div className="flex items-center space-x-2">
                 <UserCircleIcon className="w-6 h-6 text-primary-600" />
                 <span className="font-medium text-gray-700">
+                  {/* Safe access below */}
                   {user.displayName || user.email || "User"}
                 </span>
                 <button
@@ -114,6 +83,7 @@ export default function Header() {
                 </button>
               </div>
             ) : (
+              // Only show sign in when not loading
               !loading && (
                 <Link to="/auth" className="btn-primary">
                   Sign In
@@ -163,13 +133,7 @@ export default function Header() {
                   <div className="flex flex-col space-y-1">
                     <span className="flex items-center justify-center space-x-2 font-medium text-gray-700">
                       <UserCircleIcon className="inline w-5 h-5 text-primary-600" />
-                      <Link 
-                        to={getDashboardLink()}
-                        className="hover:text-primary-600"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        {user.displayName || user.email || "User"}
-                      </Link>
+                      <span>{user.displayName || user.email || "User"}</span>
                     </span>
                     <button
                       className="w-full mt-1 btn-secondary"
@@ -182,13 +146,15 @@ export default function Header() {
                     </button>
                   </div>
                 ) : (
-                  <Link
-                    to="/auth"
-                    className="block w-full text-center btn-primary"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Sign In
-                  </Link>
+                  !loading && (
+                    <Link
+                      to="/auth"
+                      className="block w-full text-center btn-primary"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Sign In
+                    </Link>
+                  )
                 )}
               </div>
             </div>
