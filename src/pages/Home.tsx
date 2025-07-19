@@ -8,20 +8,32 @@ import {
 import ImpactCard from "../components/ImpactCard";
 import FoodCard from "../components/FoodCard";
 import StoryCard from "../components/StoryCard";
-import { impactStats, communityStories } from "../data/mockData";
 import useCollection from "../hooks/useCollection";
 
 export default function Home() {
-  // Load Firestore data for food listings, categories, users
+  // Load Firestore data for food listings, categories, users, impact, stories
   const { documents: foodListings = [], loading: listingsLoading } =
     useCollection("foodListings");
   const { documents: foodCategories = [], loading: categoriesLoading } =
     useCollection("foodCategories");
   const { documents: users = [], loading: usersLoading } =
     useCollection("users");
+  const { documents: impactDocs = [], loading: impactLoading } =
+    useCollection("impactStats");
+  const { documents: communityStories = [], loading: storiesLoading } =
+    useCollection("communityStories");
 
+  // Pick top 3 for featured, top 2 for stories
   const featuredListings = foodListings.slice(0, 3);
   const featuredStories = communityStories.slice(0, 2);
+
+  // Use first impact document (aggregate) or fallback
+  const impactStats = impactDocs[0] || {
+    totalMealsShared: 0,
+    totalUsersActive: 0,
+    totalFoodWasteSaved: 0,
+    co2Saved: 0,
+  };
 
   return (
     <div className="min-h-screen">
@@ -67,7 +79,7 @@ export default function Home() {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             <ImpactCard
               title="Meals Shared"
-              value={impactStats.totalMealsShared}
+              value={impactStats.totalMealsShared?.toLocaleString?.() ?? "0"}
               subtitle="Nutritious meals distributed"
               icon={<HeartIcon className="w-6 h-6" />}
               color="primary"
@@ -75,7 +87,7 @@ export default function Home() {
             />
             <ImpactCard
               title="Active Users"
-              value={impactStats.totalUsersActive}
+              value={impactStats.totalUsersActive?.toLocaleString?.() ?? "0"}
               subtitle="Community members"
               icon={<UsersIcon className="w-6 h-6" />}
               color="accent"
@@ -83,7 +95,11 @@ export default function Home() {
             />
             <ImpactCard
               title="Food Waste Saved"
-              value={`${impactStats.totalFoodWasteSaved}kg`}
+              value={
+                impactStats.totalFoodWasteSaved
+                  ? `${impactStats.totalFoodWasteSaved.toLocaleString()}kg`
+                  : "0kg"
+              }
               subtitle="Prevented from landfills"
               icon={<GlobeAltIcon className="w-6 h-6" />}
               color="secondary"
@@ -91,7 +107,11 @@ export default function Home() {
             />
             <ImpactCard
               title="CO₂ Reduced"
-              value={`${impactStats.co2Saved}kg`}
+              value={
+                impactStats.co2Saved
+                  ? `${impactStats.co2Saved.toLocaleString()}kg`
+                  : "0kg"
+              }
               subtitle="Environmental impact"
               icon={<GlobeAltIcon className="w-6 h-6" />}
               color="primary"
@@ -215,15 +235,19 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            {featuredStories.map((story) => (
-              <StoryCard
-                key={story.id}
-                story={story}
-                onLike={(id) => console.log("Like:", id)}
-              />
-            ))}
-          </div>
+          {storiesLoading ? (
+            <div className="py-12 text-center text-gray-500">Loading...</div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {featuredStories.map((story) => (
+                <StoryCard
+                  key={story.id}
+                  story={story}
+                  onLike={(id) => console.log("Like:", id)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

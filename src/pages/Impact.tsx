@@ -7,13 +7,45 @@ import {
   ChartBarIcon,
 } from "@heroicons/react/24/outline";
 import ImpactCard from "../components/ImpactCard";
-import { impactStats } from "../data/mockData";
+import { useEffect, useState } from "react";
+import { db } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function Impact() {
+  // Robust state with defaults
+  const [impactStats, setImpactStats] = useState({
+    co2Saved: 0,
+    peopleReached: 0,
+    totalBusinessesJoined: 0,
+    totalFoodWasteSaved: 0,
+    totalMealsShared: 0,
+    totalUsersActive: 0,
+  });
+
+  // Fetch from Firestore: stats/impact document, always use safe spreading for types
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const statsDoc = await getDoc(doc(db, "stats", "impact"));
+        if (statsDoc.exists()) {
+          const data = statsDoc.data();
+          setImpactStats((prev) => ({
+            ...prev, // Fill any missing fields with default 0
+            ...data, // Overwrite with db values if present
+          }));
+        }
+      } catch (e) {
+        // fallback: keep zeroes
+      }
+    }
+    fetchStats();
+  }, []);
+
+  // Unchanged static arrays (but with dynamic values plugged in)
   const environmentalImpact = [
     {
       label: "CO₂ Emissions Reduced",
-      value: "4,521 kg",
+      value: `${impactStats.co2Saved.toLocaleString()} kg`,
       description: "Equivalent to planting 205 trees",
     },
     {
@@ -23,15 +55,15 @@ export default function Impact() {
     },
     {
       label: "Landfill Waste Prevented",
-      value: "8,934 kg",
+      value: `${impactStats.totalFoodWasteSaved.toLocaleString()} kg`,
       description: "Food diverted from waste streams",
     },
   ];
 
   const socialImpact = [
     {
-      label: "Families Supported",
-      value: "2,341",
+      label: "People Reached",
+      value: impactStats.peopleReached.toLocaleString(),
       description: "Regular access to nutritious meals",
     },
     {
@@ -75,7 +107,7 @@ export default function Impact() {
         <div className="grid grid-cols-1 gap-6 mb-12 md:grid-cols-2 lg:grid-cols-4">
           <ImpactCard
             title="Total Meals Shared"
-            value={impactStats.totalMealsShared}
+            value={impactStats.totalMealsShared.toLocaleString()}
             subtitle="Nutritious meals distributed"
             icon={<HeartIcon className="w-6 h-6" />}
             color="primary"
@@ -83,7 +115,7 @@ export default function Impact() {
           />
           <ImpactCard
             title="Active Community Members"
-            value={impactStats.totalUsersActive}
+            value={impactStats.totalUsersActive.toLocaleString()}
             subtitle="Donors, recipients & volunteers"
             icon={<UsersIcon className="w-6 h-6" />}
             color="accent"
@@ -91,7 +123,7 @@ export default function Impact() {
           />
           <ImpactCard
             title="Food Waste Prevented"
-            value={`${impactStats.totalFoodWasteSaved}kg`}
+            value={`${impactStats.totalFoodWasteSaved.toLocaleString()} kg`}
             subtitle="Diverted from landfills"
             icon={<GlobeAltIcon className="w-6 h-6" />}
             color="secondary"
@@ -99,7 +131,7 @@ export default function Impact() {
           />
           <ImpactCard
             title="Partner Businesses"
-            value={impactStats.totalBusinessesJoined}
+            value={impactStats.totalBusinessesJoined.toLocaleString()}
             subtitle="Restaurants, bakeries & hotels"
             icon={<BuildingStorefrontIcon className="w-6 h-6" />}
             color="primary"
@@ -144,8 +176,14 @@ export default function Impact() {
             <p className="mb-4 text-green-800">
               By redistributing surplus food instead of letting it go to waste,
               MealBridge has prevented the equivalent of
-              <span className="font-bold"> 4,521 kg of CO₂</span> from entering
-              the atmosphere. This is equivalent to:
+              <span className="font-bold">
+                {" "}
+                {impactStats.co2Saved
+                  ? impactStats.co2Saved.toLocaleString()
+                  : "0"}{" "}
+                kg of CO₂
+              </span>{" "}
+              from entering the atmosphere. This is equivalent to:
             </p>
             <div className="grid grid-cols-1 gap-4 text-sm text-green-700 md:grid-cols-3">
               <div className="flex items-center">
