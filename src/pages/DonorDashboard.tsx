@@ -3,11 +3,8 @@ import {
   PlusIcon,
   GiftIcon,
   ClockIcon,
-  // CheckCircleIcon,
-  // XCircleIcon,
   EyeIcon,
   PencilIcon,
-  // TrashIcon,
   TrophyIcon,
   HeartIcon,
   UsersIcon,
@@ -19,9 +16,8 @@ import {
   query,
   where,
   getDocs,
-  // doc,
-  // updateDoc,
-  // deleteDoc,
+  updateDoc,
+  doc,
   orderBy,
 } from "firebase/firestore";
 import { Link } from "react-router-dom";
@@ -48,7 +44,6 @@ export default function DonorDashboard() {
     createdAt?: any;
     pickupLocation?: { city?: string };
     type?: string;
-    // add other fields as needed
   }
 
   const [donations, setDonations] = useState<Donation[]>([]);
@@ -62,12 +57,24 @@ export default function DonorDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [_notifications, setNotifications] = useState<any[]>([]);
+  // New: view/edit modal state
+  const [viewDonation, setViewDonation] = useState<Donation | null>(null);
+  const [editDonation, setEditDonation] = useState<Donation | null>(null);
+  const [editForm, setEditForm] = useState<{
+    title?: string;
+    quantity?: string;
+    status?: string;
+  }>({});
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSuccess, setEditSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
       fetchDonorData();
       fetchNotifications();
     }
+    // eslint-disable-next-line
   }, [user]);
 
   const fetchNotifications = async () => {
@@ -103,14 +110,13 @@ export default function DonorDashboard() {
         const data = doc.data();
         return {
           id: doc.id,
-          status: data.status || "available", // Ensure status is present
+          status: data.status || "available",
           title: data.title,
           quantity: data.quantity,
           images: data.images,
           createdAt: data.createdAt,
           pickupLocation: data.pickupLocation,
           type: data.type,
-          // add other fields as needed
         };
       });
 
@@ -201,6 +207,42 @@ export default function DonorDashboard() {
     { id: "impact", name: "My Impact", icon: HeartIcon },
   ];
 
+  // Edit modal open
+  const openEditModal = (donation: Donation) => {
+    setEditDonation(donation);
+    setEditForm({
+      title: donation.title,
+      quantity: donation.quantity,
+      status: donation.status,
+    });
+    setEditError(null);
+    setEditSuccess(null);
+  };
+
+  const handleEditInputChange = (field: string, value: string) => {
+    setEditForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleEditSave = async () => {
+    if (!editDonation) return;
+    setEditError(null);
+    setEditSuccess(null);
+    setEditLoading(true);
+    try {
+      await updateDoc(doc(db, "foodListings", editDonation.id), {
+        ...editForm,
+      });
+      setEditSuccess("Donation updated successfully");
+      await fetchDonorData();
+      setTimeout(() => {
+        setEditDonation(null);
+      }, 1200);
+    } catch (e: any) {
+      setEditError("Update failed. " + (e.message ?? ""));
+    }
+    setEditLoading(false);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -214,6 +256,132 @@ export default function DonorDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* View Donation Modal */}
+      {viewDonation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="relative w-full max-w-lg p-6 bg-white rounded-lg shadow-xl">
+            <button
+              onClick={() => setViewDonation(null)}
+              className="absolute text-gray-400 top-3 right-3 hover:text-gray-600"
+              title="Close"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+            <img
+              src={
+                viewDonation.images?.[0] ||
+                "https://via.placeholder.com/600x180"
+              }
+              alt={viewDonation.title}
+              className="object-cover w-full mb-4 rounded-lg max-h-48"
+            />
+            <h2 className="mb-2 text-xl font-bold">{viewDonation.title}</h2>
+            <div className="mb-1 text-gray-700">
+              Quantity:{" "}
+              <span className="font-medium">{viewDonation.quantity}</span>
+            </div>
+            <div className="mb-1 text-gray-700">
+              Status:{" "}
+              <span
+                className={cn(
+                  "px-2 py-1 rounded-full text-xs font-medium",
+                  getStatusColor(viewDonation.status)
+                )}
+              >
+                {viewDonation.status}
+              </span>
+            </div>
+            <div className="mb-1 text-gray-700">
+              Type:{" "}
+              <span>
+                {viewDonation.type === "free" ? "Free" : "Half Price"}
+              </span>
+            </div>
+            <div className="mb-1 text-gray-700">
+              Pickup City: <span>{viewDonation.pickupLocation?.city}</span>
+            </div>
+            <div className="mb-1 text-gray-700">
+              Date: <span>{formatDate(viewDonation.createdAt)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Donation Modal */}
+      {editDonation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="relative w-full max-w-lg p-6 bg-white rounded-lg shadow-xl">
+            <button
+              onClick={() => setEditDonation(null)}
+              className="absolute text-gray-400 top-3 right-3 hover:text-gray-600"
+              title="Close"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+            <h2 className="mb-2 text-xl font-bold">Edit Donation</h2>
+            <div className="mb-4">
+              <label className="block mb-1 font-medium">Title</label>
+              <input
+                className="w-full input-field"
+                type="text"
+                value={editForm.title ?? ""}
+                onChange={(e) => handleEditInputChange("title", e.target.value)}
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block mb-1 font-medium">Quantity</label>
+              <input
+                className="w-full input-field"
+                type="text"
+                value={editForm.quantity ?? ""}
+                onChange={(e) =>
+                  handleEditInputChange("quantity", e.target.value)
+                }
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block mb-1 font-medium">Status</label>
+              <select
+                className="w-full input-field"
+                value={editForm.status ?? "available"}
+                onChange={(e) =>
+                  handleEditInputChange("status", e.target.value)
+                }
+              >
+                <option value="available">Available</option>
+                <option value="claimed">Claimed</option>
+                <option value="completed">Completed</option>
+                <option value="expired">Expired</option>
+              </select>
+            </div>
+            {editError && (
+              <div className="mb-2 text-sm text-red-500">{editError}</div>
+            )}
+            {editSuccess && (
+              <div className="mb-2 text-sm text-green-600">{editSuccess}</div>
+            )}
+            <div className="flex space-x-3">
+              <button
+                className="flex-1 btn-outline"
+                onClick={() => setEditDonation(null)}
+                disabled={editLoading}
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 btn-primary"
+                onClick={handleEditSave}
+                disabled={editLoading}
+                type="button"
+              >
+                {editLoading ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white shadow-sm">
         <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
@@ -240,6 +408,8 @@ export default function DonorDashboard() {
       <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
+          {/* ... unchanged stats cards ... */}
+          {/* (Your stats card code remains unchanged) */}
           <div className="card">
             <div className="flex items-center">
               <div className="p-3 rounded-lg bg-primary-100">
@@ -255,7 +425,6 @@ export default function DonorDashboard() {
               </div>
             </div>
           </div>
-
           <div className="card">
             <div className="flex items-center">
               <div className="p-3 bg-green-100 rounded-lg">
@@ -271,7 +440,6 @@ export default function DonorDashboard() {
               </div>
             </div>
           </div>
-
           <div className="card">
             <div className="flex items-center">
               <div className="p-3 bg-blue-100 rounded-lg">
@@ -287,7 +455,6 @@ export default function DonorDashboard() {
               </div>
             </div>
           </div>
-
           <div className="card">
             <div className="flex items-center">
               <div className="p-3 bg-purple-100 rounded-lg">
@@ -354,7 +521,6 @@ export default function DonorDashboard() {
                 )}
               </div>
             </div>
-
             {/* Recent Activity */}
             <div className="card">
               <h3 className="mb-4 text-lg font-semibold text-gray-900">
@@ -429,10 +595,18 @@ export default function DonorDashboard() {
                       {donation.status}
                     </span>
                     <div className="flex space-x-2">
-                      <button className="p-2 text-gray-400 hover:text-gray-600">
+                      <button
+                        className="p-2 text-gray-400 hover:text-gray-600"
+                        title="View"
+                        onClick={() => setViewDonation(donation)}
+                      >
                         <EyeIcon className="w-4 h-4" />
                       </button>
-                      <button className="p-2 text-gray-400 hover:text-gray-600">
+                      <button
+                        className="p-2 text-gray-400 hover:text-gray-600"
+                        title="Edit"
+                        onClick={() => openEditModal(donation)}
+                      >
                         <PencilIcon className="w-4 h-4" />
                       </button>
                     </div>
@@ -442,6 +616,7 @@ export default function DonorDashboard() {
           </div>
         )}
 
+        {/* History/impact tabs remain unchanged */}
         {activeTab === "history" && (
           <div className="card">
             <div className="overflow-x-auto">
@@ -543,7 +718,6 @@ export default function DonorDashboard() {
                   </div>
                 </div>
               </div>
-
               <div className="card">
                 <h3 className="mb-4 text-lg font-semibold text-gray-900">
                   Community Impact
@@ -568,7 +742,6 @@ export default function DonorDashboard() {
                 </div>
               </div>
             </div>
-
             <div className="card">
               <h3 className="mb-4 text-lg font-semibold text-gray-900">
                 Monthly Progress
