@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { cn } from "../utils/cn";
 import { useNavigate } from "react-router-dom";
-
 import { auth, db } from "../firebase";
 import {
   signInWithEmailAndPassword,
@@ -31,6 +30,13 @@ export default function Auth() {
     phone: "",
     agreeToTerms: false,
   });
+
+  // State for pending Google user data
+  const [pendingGoogleUser, setPendingGoogleUser] = useState<{
+    uid: string;
+    name: string;
+    email: string;
+  } | null>(null);
 
   const navigate = useNavigate();
 
@@ -89,37 +95,57 @@ export default function Auth() {
       const userDocRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userDocRef);
 
-      // If new Google user, create a document (defaulting role to "donor" -- you can prompt later)
       if (!userDoc.exists()) {
-        await setDoc(userDocRef, {
+        // Prompt (modal) for new Google user to complete sign up
+        setPendingGoogleUser({
+          uid: user.uid,
           name: user.displayName ?? "",
           email: user.email ?? "",
-          role: "donor", // Or let user choose after login, depending on your workflow
-          location: "",
-          phone: "",
-          verified: user.emailVerified ?? false,
-          joinedAt: serverTimestamp(),
         });
-      }
-
-      // Fetch the latest role (for redirect)
-      const freshUserDoc = await getDoc(userDocRef);
-      const role = freshUserDoc.data()?.role;
-
-      setLoading(false);
-
-      // Redirect based on role
-      if (role === "donor") {
-        navigate("/dashboard/donor");
-      } else if (role === "recipient") {
-        navigate("/dashboard/recipient");
-      } else if (role === "volunteer") {
-        navigate("/dashboard/volunteer");
+        setLoading(false);
       } else {
-        setError("Invalid role. Please contact support.");
+        // Existing Google user, route by role
+        const role = userDoc.data()?.role;
+        setLoading(false);
+        if (role === "donor") navigate("/dashboard/donor");
+        else if (role === "recipient") navigate("/dashboard/recipient");
+        else if (role === "volunteer") navigate("/dashboard/volunteer");
+        else setError("Invalid role. Please contact support.");
       }
     } catch (err: any) {
       setError(err.message || "Google sign-in failed.");
+      setLoading(false);
+    }
+  };
+
+  // Handler to finish Google signup
+  const completeGoogleSignup = async () => {
+    if (!pendingGoogleUser) return;
+    if (!selectedRole || !formData.location) {
+      setError("Please select a role and provide your location.");
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      await setDoc(doc(db, "users", pendingGoogleUser.uid), {
+        name: pendingGoogleUser.name,
+        email: pendingGoogleUser.email,
+        role: selectedRole,
+        location: formData.location,
+        phone: formData.phone,
+        verified: true,
+        joinedAt: serverTimestamp(),
+      });
+      setPendingGoogleUser(null);
+      setLoading(false);
+      if (selectedRole === "donor") navigate("/dashboard/donor");
+      else if (selectedRole === "recipient") navigate("/dashboard/recipient");
+      else if (selectedRole === "volunteer") navigate("/dashboard/volunteer");
+    } catch (err: any) {
+      setError(
+        "Failed to complete sign up: " + (err.message ?? "Unknown error")
+      );
       setLoading(false);
     }
   };
@@ -205,6 +231,102 @@ export default function Auth() {
 
   return (
     <div className="flex flex-col justify-center min-h-screen py-12 bg-gray-50 sm:px-6 lg:px-8">
+      {/* Pending Google Signup Modal */}
+      {pendingGoogleUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-xl">
+            <h2 className="mb-4 text-2xl font-bold text-center text-gray-900">
+              Complete Sign Up
+            </h2>
+            <p className="mb-4 text-center text-gray-700">
+              Welcome,{" "}
+              <span className="font-semibold">
+                {pendingGoogleUser.name || pendingGoogleUser.email}
+              </span>
+              !<br />
+              Please choose your role and fill in your info to finish creating
+              your MealBridge account.
+            </p>
+            <div className="mb-4">
+              <label className="block mb-2 text-sm font-medium text-gray-700">
+                Choose your role
+              </label>
+              <div className="space-y-2">
+                {roles.map((role) => (
+                  <div
+                    key={role.id}
+                    className={cn(
+                      "relative rounded-lg border p-3 cursor-pointer transition-all",
+                      selectedRole === role.id
+                        ? "border-primary-500 bg-primary-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    )}
+                    onClick={() => setSelectedRole(role.id)}
+                  >
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="google_role"
+                        value={role.id}
+                        checked={selectedRole === role.id}
+                        onChange={() => setSelectedRole(role.id)}
+                        className="w-4 h-4 border-gray-300 text-primary-600"
+                      />
+                      <span className="text-lg">{role.icon}</span>
+                      <span className="font-medium text-gray-900">
+                        {role.title}
+                      </span>
+                    </label>
+                    <p className="ml-6 text-xs text-gray-500">
+                      {role.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="mb-4">
+              <label className="block mb-1 text-sm font-medium text-gray-700">
+                Location
+              </label>
+              <input
+                type="text"
+                value={formData.location}
+                onChange={(e) => handleInputChange("location", e.target.value)}
+                className="input-field"
+                placeholder="City, District"
+                required
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block mb-1 text-sm font-medium text-gray-700">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => handleInputChange("phone", e.target.value)}
+                className="input-field"
+                placeholder="+94 XX XXX XXXX"
+              />
+            </div>
+            {error && (
+              <div className="mb-4 text-sm text-center text-red-500">
+                {error}
+              </div>
+            )}
+            <button
+              type="button"
+              className="w-full btn-primary"
+              onClick={completeGoogleSignup}
+              disabled={loading}
+            >
+              {loading ? "Completing Signup..." : "Complete Sign Up"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* All original auth UI below (UNCHANGED) */}
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
           <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary-600">
