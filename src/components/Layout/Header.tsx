@@ -27,8 +27,7 @@ export default function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, loading } = useAuth();
-
-  // Optional: role cache for instant re-open menu
+  // For dashboard redirection & menu
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
@@ -45,10 +44,8 @@ export default function Header() {
     return () => window.removeEventListener("mousedown", onClick);
   }, [profileMenuOpen]);
 
-  // Retrieve user role from Firestore for Dashboard routing
   const fetchUserRole = async () => {
     if (!user) return null;
-    // Only fetch if not already loaded
     if (userRole) return userRole;
     try {
       const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -58,19 +55,18 @@ export default function Header() {
         return role;
       }
     } catch (e) {
-      // fail silently
+      /* silent */
     }
     return null;
   };
 
-  // Handle "Go to Dashboard"
   const handleGoToDashboard = async () => {
     const role = await fetchUserRole();
     setProfileMenuOpen(false);
     if (role === "donor") navigate("/dashboard/donor");
     else if (role === "recipient") navigate("/dashboard/recipient");
     else if (role === "volunteer") navigate("/dashboard/volunteer");
-    else navigate("/"); // fallback
+    else navigate("/");
   };
 
   const handleSignOut = async () => {
@@ -130,7 +126,15 @@ export default function Header() {
                   aria-expanded={profileMenuOpen}
                   aria-label="Open user menu"
                 >
-                  <UserCircleIcon className="w-6 h-6 text-primary-600" />
+                  {user.photoURL ? (
+                    <img
+                      src={user.photoURL}
+                      alt={user.displayName || "User"}
+                      className="object-cover w-6 h-6 rounded-full"
+                    />
+                  ) : (
+                    <UserCircleIcon className="w-6 h-6 text-primary-600" />
+                  )}
                   <span className="font-medium text-gray-700">
                     {user.displayName || user.email || "User"}
                   </span>
@@ -209,7 +213,6 @@ export default function Header() {
                 </Link>
               ))}
               <div className="px-3 py-2">
-                {/* Auth actions for mobile */}
                 {!loading && user ? (
                   <div className="flex flex-col space-y-1">
                     <button
@@ -220,10 +223,17 @@ export default function Header() {
                         if (!userRole) fetchUserRole();
                       }}
                     >
-                      <UserCircleIcon className="inline w-5 h-5 text-primary-600" />
+                      {user.photoURL ? (
+                        <img
+                          src={user.photoURL}
+                          alt={user.displayName || "User"}
+                          className="inline-block object-cover w-5 h-5 rounded-full"
+                        />
+                      ) : (
+                        <UserCircleIcon className="inline w-5 h-5 text-primary-600" />
+                      )}
                       <span>{user.displayName || user.email || "User"}</span>
                     </button>
-                    {/* Show menu like on desktop (optional on mobile) */}
                     {profileMenuOpen && (
                       <div
                         ref={profileMenuRef}
