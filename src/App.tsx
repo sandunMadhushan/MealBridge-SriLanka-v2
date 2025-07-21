@@ -12,6 +12,7 @@ import DonorDashboard from "./pages/DonorDashboard";
 import RecipientDashboard from "./pages/RecipientDashboard";
 import VolunteerDashboard from "./pages/VolunteerDashboard";
 import ForgotPassword from "./pages/ForgotPassword";
+import Profile from "./pages/Profile";
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
               element={<VolunteerDashboard />}
             />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/profile" element={<Profile />} />
           </Routes>
         </main>
         <Footer />
