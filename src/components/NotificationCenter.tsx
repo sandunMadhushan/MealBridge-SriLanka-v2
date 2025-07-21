@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import {
   BellIcon,
   XMarkIcon,
-  CheckIcon,
-  ClockIcon,
+  // CheckIcon,
+  // ClockIcon,
   TruckIcon,
   GiftIcon,
 } from "@heroicons/react/24/outline";
@@ -18,13 +18,21 @@ import {
   doc,
   updateDoc,
   getDoc,
+  addDoc,
 } from "firebase/firestore";
 import { cn } from "../utils/cn";
 
 interface Notification {
   id: string;
   userId: string;
-  type: 'food_request' | 'food_claim' | 'delivery_request' | 'request_accepted' | 'request_declined' | 'delivery_assigned' | 'delivery_completed';
+  type:
+    | "food_request"
+    | "food_claim"
+    | "delivery_request"
+    | "request_accepted"
+    | "request_declined"
+    | "delivery_assigned"
+    | "delivery_completed";
   title: string;
   message: string;
   read: boolean;
@@ -37,7 +45,8 @@ export default function NotificationCenter() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [selectedNotification, setSelectedNotification] =
+    useState<Notification | null>(null);
   const [loading, setLoading] = useState(false);
   const [requestDetails, setRequestDetails] = useState<any>(null);
 
@@ -51,22 +60,25 @@ export default function NotificationCenter() {
     );
 
     const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
-      const notificationData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Notification));
+      const notificationData = snapshot.docs.map(
+        (doc) =>
+          ({
+            id: doc.id,
+            ...doc.data(),
+          } as Notification)
+      );
       setNotifications(notificationData);
     });
 
     return () => unsubscribe();
   }, [user]);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const markAsRead = async (notificationId: string) => {
     try {
       await updateDoc(doc(db, "notifications", notificationId), {
-        read: true
+        read: true,
       });
     } catch (error) {
       console.error("Error marking notification as read:", error);
@@ -76,7 +88,7 @@ export default function NotificationCenter() {
   const handleNotificationClick = async (notification: Notification) => {
     setSelectedNotification(notification);
     setLoading(true);
-    
+
     if (!notification.read) {
       await markAsRead(notification.id);
     }
@@ -85,18 +97,24 @@ export default function NotificationCenter() {
     if (notification.relatedId) {
       try {
         let details = null;
-        if (notification.type === 'food_request') {
-          const requestDoc = await getDoc(doc(db, "foodRequests", notification.relatedId));
+        if (notification.type === "food_request") {
+          const requestDoc = await getDoc(
+            doc(db, "foodRequests", notification.relatedId)
+          );
           if (requestDoc.exists()) {
             details = { id: requestDoc.id, ...requestDoc.data() };
           }
-        } else if (notification.type === 'food_claim') {
-          const claimDoc = await getDoc(doc(db, "foodClaims", notification.relatedId));
+        } else if (notification.type === "food_claim") {
+          const claimDoc = await getDoc(
+            doc(db, "foodClaims", notification.relatedId)
+          );
           if (claimDoc.exists()) {
             details = { id: claimDoc.id, ...claimDoc.data() };
           }
-        } else if (notification.type === 'delivery_request') {
-          const deliveryDoc = await getDoc(doc(db, "deliveryRequests", notification.relatedId));
+        } else if (notification.type === "delivery_request") {
+          const deliveryDoc = await getDoc(
+            doc(db, "deliveryRequests", notification.relatedId)
+          );
           if (deliveryDoc.exists()) {
             details = { id: deliveryDoc.id, ...deliveryDoc.data() };
           }
@@ -111,29 +129,32 @@ export default function NotificationCenter() {
 
   const handleAcceptRequest = async () => {
     if (!selectedNotification || !requestDetails) return;
-    
+
     setLoading(true);
     try {
       let collectionName = "";
-      if (selectedNotification.type === 'food_request') {
+      if (selectedNotification.type === "food_request") {
         collectionName = "foodRequests";
-      } else if (selectedNotification.type === 'food_claim') {
+      } else if (selectedNotification.type === "food_claim") {
         collectionName = "foodClaims";
-      } else if (selectedNotification.type === 'delivery_request') {
+      } else if (selectedNotification.type === "delivery_request") {
         collectionName = "deliveryRequests";
       }
 
       // Update request status
       await updateDoc(doc(db, collectionName, requestDetails.id), {
-        status: "accepted"
+        status: "accepted",
       });
 
       // Create notification for requester
       await createNotification(
         requestDetails.requesterId || requestDetails.claimantId,
-        'request_accepted',
-        'Request Accepted!',
-        `Your ${selectedNotification.type.replace('_', ' ')} has been accepted.`,
+        "request_accepted",
+        "Request Accepted!",
+        `Your ${selectedNotification.type.replace(
+          "_",
+          " "
+        )} has been accepted.`,
         requestDetails.id
       );
 
@@ -147,29 +168,32 @@ export default function NotificationCenter() {
 
   const handleDeclineRequest = async () => {
     if (!selectedNotification || !requestDetails) return;
-    
+
     setLoading(true);
     try {
       let collectionName = "";
-      if (selectedNotification.type === 'food_request') {
+      if (selectedNotification.type === "food_request") {
         collectionName = "foodRequests";
-      } else if (selectedNotification.type === 'food_claim') {
+      } else if (selectedNotification.type === "food_claim") {
         collectionName = "foodClaims";
-      } else if (selectedNotification.type === 'delivery_request') {
+      } else if (selectedNotification.type === "delivery_request") {
         collectionName = "deliveryRequests";
       }
 
       // Update request status
       await updateDoc(doc(db, collectionName, requestDetails.id), {
-        status: "declined"
+        status: "declined",
       });
 
       // Create notification for requester
       await createNotification(
         requestDetails.requesterId || requestDetails.claimantId,
-        'request_declined',
-        'Request Declined',
-        `Your ${selectedNotification.type.replace('_', ' ')} has been declined.`,
+        "request_declined",
+        "Request Declined",
+        `Your ${selectedNotification.type.replace(
+          "_",
+          " "
+        )} has been declined.`,
         requestDetails.id
       );
 
@@ -181,16 +205,22 @@ export default function NotificationCenter() {
     setLoading(false);
   };
 
-  const createNotification = async (userId: string, type: string, title: string, message: string, relatedId?: string) => {
+  const createNotification = async (
+    userId: string,
+    type: string,
+    title: string,
+    message: string,
+    relatedId?: string
+  ) => {
     try {
-      await collection(db, "notifications").add({
+      await addDoc(collection(db, "notifications"), {
         userId,
         type,
         title,
         message,
         read: false,
         createdAt: new Date(),
-        relatedId
+        relatedId,
       });
     } catch (error) {
       console.error("Error creating notification:", error);
@@ -199,12 +229,12 @@ export default function NotificationCenter() {
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case 'food_request':
-      case 'food_claim':
+      case "food_request":
+      case "food_claim":
         return <GiftIcon className="w-5 h-5" />;
-      case 'delivery_request':
-      case 'delivery_assigned':
-      case 'delivery_completed':
+      case "delivery_request":
+      case "delivery_assigned":
+      case "delivery_completed":
         return <TruckIcon className="w-5 h-5" />;
       default:
         return <BellIcon className="w-5 h-5" />;
@@ -228,17 +258,19 @@ export default function NotificationCenter() {
         <BellIcon className="w-6 h-6" />
         {unreadCount > 0 && (
           <span className="absolute top-0 right-0 flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
-            {unreadCount > 9 ? '9+' : unreadCount}
+            {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </button>
 
       {/* Notifications Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 z-50 w-80 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg top-full">
+        <div className="absolute right-0 z-50 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg w-80 top-full">
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Notifications
+              </h3>
               <button
                 onClick={() => setIsOpen(false)}
                 className="p-1 text-gray-400 hover:text-gray-600"
@@ -248,7 +280,7 @@ export default function NotificationCenter() {
             </div>
           </div>
 
-          <div className="max-h-96 overflow-y-auto">
+          <div className="overflow-y-auto max-h-96">
             {notifications.length === 0 ? (
               <div className="p-4 text-center text-gray-500">
                 No notifications yet
@@ -264,23 +296,31 @@ export default function NotificationCenter() {
                   )}
                 >
                   <div className="flex items-start space-x-3">
-                    <div className={cn(
-                      "p-2 rounded-full",
-                      notification.read ? "bg-gray-100 text-gray-600" : "bg-primary-100 text-primary-600"
-                    )}>
+                    <div
+                      className={cn(
+                        "p-2 rounded-full",
+                        notification.read
+                          ? "bg-gray-100 text-gray-600"
+                          : "bg-primary-100 text-primary-600"
+                      )}
+                    >
                       {getNotificationIcon(notification.type)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={cn(
-                        "text-sm font-medium",
-                        notification.read ? "text-gray-900" : "text-gray-900 font-semibold"
-                      )}>
+                      <p
+                        className={cn(
+                          "text-sm font-medium",
+                          notification.read
+                            ? "text-gray-900"
+                            : "text-gray-900 font-semibold"
+                        )}
+                      >
                         {notification.title}
                       </p>
                       <p className="text-sm text-gray-600 line-clamp-2">
                         {notification.message}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="mt-1 text-xs text-gray-500">
                         {formatDate(notification.createdAt)}
                       </p>
                     </div>
@@ -323,15 +363,23 @@ export default function NotificationCenter() {
               ) : requestDetails ? (
                 <div className="space-y-4">
                   <div className="p-4 border border-gray-200 rounded-lg bg-gray-50">
-                    <h4 className="font-medium text-gray-900 mb-2">Request Details</h4>
+                    <h4 className="mb-2 font-medium text-gray-900">
+                      Request Details
+                    </h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Requester:</span>
-                        <span className="font-medium">{requestDetails.requesterName || requestDetails.claimantName}</span>
+                        <span className="font-medium">
+                          {requestDetails.requesterName ||
+                            requestDetails.claimantName}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Email:</span>
-                        <span>{requestDetails.requesterEmail || requestDetails.claimantEmail}</span>
+                        <span>
+                          {requestDetails.requesterEmail ||
+                            requestDetails.claimantEmail}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Phone:</span>
@@ -346,17 +394,23 @@ export default function NotificationCenter() {
                       {requestDetails.totalPrice && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Total Price:</span>
-                          <span className="font-medium">LKR {requestDetails.totalPrice}</span>
+                          <span className="font-medium">
+                            LKR {requestDetails.totalPrice}
+                          </span>
                         </div>
                       )}
                       <div className="flex justify-between">
                         <span className="text-gray-600">Status:</span>
-                        <span className={cn(
-                          "px-2 py-1 rounded-full text-xs font-medium",
-                          requestDetails.status === 'pending' ? "bg-yellow-100 text-yellow-800" :
-                          requestDetails.status === 'accepted' ? "bg-green-100 text-green-800" :
-                          "bg-red-100 text-red-800"
-                        )}>
+                        <span
+                          className={cn(
+                            "px-2 py-1 rounded-full text-xs font-medium",
+                            requestDetails.status === "pending"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : requestDetails.status === "accepted"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          )}
+                        >
                           {requestDetails.status}
                         </span>
                       </div>
@@ -365,12 +419,14 @@ export default function NotificationCenter() {
 
                   {requestDetails.notes && (
                     <div className="p-3 border border-gray-200 rounded-lg bg-gray-50">
-                      <h5 className="font-medium text-gray-900 mb-1">Notes:</h5>
-                      <p className="text-sm text-gray-700">{requestDetails.notes}</p>
+                      <h5 className="mb-1 font-medium text-gray-900">Notes:</h5>
+                      <p className="text-sm text-gray-700">
+                        {requestDetails.notes}
+                      </p>
                     </div>
                   )}
 
-                  {requestDetails.status === 'pending' && (
+                  {requestDetails.status === "pending" && (
                     <div className="flex space-x-3">
                       <button
                         onClick={handleDeclineRequest}
@@ -392,7 +448,9 @@ export default function NotificationCenter() {
               ) : (
                 <div className="text-center text-gray-500">
                   <p>{selectedNotification.message}</p>
-                  <p className="text-sm mt-2">{formatDate(selectedNotification.createdAt)}</p>
+                  <p className="mt-2 text-sm">
+                    {formatDate(selectedNotification.createdAt)}
+                  </p>
                 </div>
               )}
             </div>

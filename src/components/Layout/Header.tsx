@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Bars3Icon,
   XMarkIcon,
-  BellIcon,
+  // BellIcon,
   UserCircleIcon,
 } from "@heroicons/react/24/outline";
 import { cn } from "../../utils/cn";

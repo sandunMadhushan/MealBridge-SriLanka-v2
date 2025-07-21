@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   XMarkIcon,
-  TruckIcon,
+  //   TruckIcon,
   MapPinIcon,
   ClockIcon,
   CurrencyDollarIcon,
@@ -9,7 +9,14 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../firebase";
-import { collection, addDoc, Timestamp, getDoc, doc } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  Timestamp,
+  getDoc,
+  doc,
+  getDocs,
+} from "firebase/firestore";
 
 interface DeliveryModalProps {
   isOpen: boolean;
@@ -41,48 +48,68 @@ export default function DeliveryModal({
   });
 
   const districts = [
-    "Ampara", "Anuradhapura", "Badulla", "Batticaloa", "Colombo", "Galle",
-    "Gampaha", "Hambantota", "Jaffna", "Kalutara", "Kandy", "Kegalle",
-    "Kilinochchi", "Kurunegala", "Mannar", "Matale", "Matara", "Monaragala",
-    "Mullaitivu", "Nuwara Eliya", "Polonnaruwa", "Puttalam", "Ratnapura",
-    "Trincomalee", "Vavuniya"
+    "Ampara",
+    "Anuradhapura",
+    "Badulla",
+    "Batticaloa",
+    "Colombo",
+    "Galle",
+    "Gampaha",
+    "Hambantota",
+    "Jaffna",
+    "Kalutara",
+    "Kandy",
+    "Kegalle",
+    "Kilinochchi",
+    "Kurunegala",
+    "Mannar",
+    "Matale",
+    "Matara",
+    "Monaragala",
+    "Mullaitivu",
+    "Nuwara Eliya",
+    "Polonnaruwa",
+    "Puttalam",
+    "Ratnapura",
+    "Trincomalee",
+    "Vavuniya",
   ];
 
   // Calculate delivery fee based on district and urgency
   const calculateDeliveryFee = () => {
     let baseFee = 200; // Base fee in LKR
-    
+
     // Distance-based pricing
     const districtFees: { [key: string]: number } = {
-      "Colombo": 200,
-      "Gampaha": 250,
-      "Kalutara": 300,
-      "Kandy": 400,
-      "Galle": 350,
-      "Matara": 400,
-      "Hambantota": 450,
-      "Jaffna": 500,
-      "Anuradhapura": 450,
-      "Polonnaruwa": 400,
-      "Kurunegala": 350,
-      "Puttalam": 400,
-      "Ratnapura": 350,
-      "Kegalle": 300,
-      "Badulla": 400,
-      "Monaragala": 450,
-      "Trincomalee": 450,
-      "Batticaloa": 400,
-      "Ampara": 400,
+      Colombo: 200,
+      Gampaha: 250,
+      Kalutara: 300,
+      Kandy: 400,
+      Galle: 350,
+      Matara: 400,
+      Hambantota: 450,
+      Jaffna: 500,
+      Anuradhapura: 450,
+      Polonnaruwa: 400,
+      Kurunegala: 350,
+      Puttalam: 400,
+      Ratnapura: 350,
+      Kegalle: 300,
+      Badulla: 400,
+      Monaragala: 450,
+      Trincomalee: 450,
+      Batticaloa: 400,
+      Ampara: 400,
       "Nuwara Eliya": 350,
-      "Matale": 350,
-      "Vavuniya": 450,
-      "Mannar": 500,
-      "Kilinochchi": 500,
-      "Mullaitivu": 500,
+      Matale: 350,
+      Vavuniya: 450,
+      Mannar: 500,
+      Kilinochchi: 500,
+      Mullaitivu: 500,
     };
 
     baseFee = districtFees[formData.district] || 300;
-    
+
     // Urgent delivery surcharge
     if (formData.urgentDelivery) {
       baseFee += 100;
@@ -166,7 +193,9 @@ export default function DeliveryModal({
           userId: donorId,
           type: "delivery_request",
           title: "New Delivery Request",
-          message: `${user.displayName || user.email} requested delivery for: ${listing.title} to ${formData.city}, ${formData.district}`,
+          message: `${user.displayName || user.email} requested delivery for: ${
+            listing.title
+          } to ${formData.city}, ${formData.district}`,
           read: false,
           createdAt: Timestamp.now(),
           relatedId: deliveryRef.id,
@@ -177,12 +206,14 @@ export default function DeliveryModal({
       // Note: In a real app, you'd query volunteers by location
       const volunteersQuery = collection(db, "users");
       const volunteersSnapshot = await getDocs(volunteersQuery);
-      
+
       volunteersSnapshot.docs.forEach(async (volunteerDoc) => {
         const volunteerData = volunteerDoc.data();
-        if (volunteerData.role === "volunteer" && 
-            (volunteerData.location?.includes(formData.district) || 
-             volunteerData.district === formData.district)) {
+        if (
+          volunteerData.role === "volunteer" &&
+          (volunteerData.location?.includes(formData.district) ||
+            volunteerData.district === formData.district)
+        ) {
           await addDoc(collection(db, "notifications"), {
             userId: volunteerDoc.id,
             type: "delivery_request",
@@ -195,7 +226,9 @@ export default function DeliveryModal({
         }
       });
 
-      setSuccess("Delivery request submitted successfully! Volunteers in your area will be notified.");
+      setSuccess(
+        "Delivery request submitted successfully! Volunteers in your area will be notified."
+      );
       setTimeout(() => {
         onClose();
       }, 2000);
@@ -419,7 +452,8 @@ export default function DeliveryModal({
               </span>
             </div>
             <p className="mt-2 text-sm text-primary-700">
-              Fee varies by distance and urgency. Payment to volunteer on delivery.
+              Fee varies by distance and urgency. Payment to volunteer on
+              delivery.
             </p>
           </div>
 
@@ -432,7 +466,7 @@ export default function DeliveryModal({
                   About Our Volunteers
                 </h5>
                 <p className="text-xs text-blue-700">
-                  Our verified volunteers will handle your delivery with care. 
+                  Our verified volunteers will handle your delivery with care.
                   You'll receive volunteer contact details once assigned.
                 </p>
               </div>
@@ -466,7 +500,9 @@ export default function DeliveryModal({
               className="flex-1 btn-primary"
               disabled={loading}
             >
-              {loading ? "Requesting..." : `Request Delivery (LKR ${deliveryFee})`}
+              {loading
+                ? "Requesting..."
+                : `Request Delivery (LKR ${deliveryFee})`}
             </button>
           </div>
         </form>

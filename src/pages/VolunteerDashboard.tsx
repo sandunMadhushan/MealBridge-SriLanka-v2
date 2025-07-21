@@ -18,6 +18,9 @@ import {
   getDocs,
   doc,
   updateDoc,
+  getDoc,
+  addDoc,
+  orderBy,
 } from "firebase/firestore";
 import { Link } from "react-router-dom";
 import { cn } from "../utils/cn";
@@ -75,7 +78,7 @@ export default function VolunteerDashboard() {
 
   const fetchNotifications = async () => {
     if (!user) return;
-    
+
     try {
       const notificationsQuery = query(
         collection(db, "notifications"),
@@ -187,13 +190,15 @@ export default function VolunteerDashboard() {
       // Get delivery request details to notify the requester
       const deliveryDoc = await getDoc(doc(db, "deliveryRequests", deliveryId));
       const deliveryData = deliveryDoc.data();
-      
+
       if (deliveryData?.requesterId) {
         await addDoc(collection(db, "notifications"), {
           userId: deliveryData.requesterId,
           type: "delivery_assigned",
           title: "Volunteer Assigned",
-          message: `${user?.displayName || user?.email} will handle your delivery to ${deliveryData.deliveryAddress?.city}`,
+          message: `${
+            user?.displayName || user?.email
+          } will handle your delivery to ${deliveryData.deliveryAddress?.city}`,
           read: false,
           createdAt: new Date(),
           relatedId: deliveryId,
@@ -215,7 +220,7 @@ export default function VolunteerDashboard() {
       // Get delivery request details to notify the requester
       const deliveryDoc = await getDoc(doc(db, "deliveryRequests", deliveryId));
       const deliveryData = deliveryDoc.data();
-      
+
       if (deliveryData?.requesterId) {
         await addDoc(collection(db, "notifications"), {
           userId: deliveryData.requesterId,
