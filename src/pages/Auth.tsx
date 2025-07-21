@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { cn } from "../utils/cn";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { auth, db } from "../firebase";
 import {
   signInWithEmailAndPassword,
@@ -656,12 +656,12 @@ export default function Auth() {
             {/* Forgot Password (only for login) */}
             {isLogin && (
               <div className="text-center">
-                <a
-                  href="#"
+                <Link
+                  to="/forgot-password"
                   className="text-sm text-primary-600 hover:text-primary-500"
                 >
                   Forgot your password?
-                </a>
+                </Link>
               </div>
             )}
           </form>

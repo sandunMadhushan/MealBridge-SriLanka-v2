@@ -11,6 +11,7 @@ import UploadMockDataPage from "./pages/UploadMockData";
 import DonorDashboard from "./pages/DonorDashboard";
 import RecipientDashboard from "./pages/RecipientDashboard";
 import VolunteerDashboard from "./pages/VolunteerDashboard";
+import ForgotPassword from "./pages/ForgotPassword";
 
 function App() {
   return (
@@ -27,8 +28,15 @@ function App() {
             <Route path="/auth" element={<Auth />} />
             <Route path="/uploadAllMockData" element={<UploadMockDataPage />} />
             <Route path="/dashboard/donor" element={<DonorDashboard />} />
-            <Route path="/dashboard/recipient" element={<RecipientDashboard />} />
-            <Route path="/dashboard/volunteer" element={<VolunteerDashboard />} />
+            <Route
+              path="/dashboard/recipient"
+              element={<RecipientDashboard />}
+            />
+            <Route
+              path="/dashboard/volunteer"
+              element={<VolunteerDashboard />}
+            />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
           </Routes>
         </main>
         <Footer />
