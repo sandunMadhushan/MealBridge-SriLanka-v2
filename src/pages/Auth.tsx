@@ -8,6 +8,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   updateProfile,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
 import { setDoc, doc, serverTimestamp, getDoc } from "firebase/firestore";
 
@@ -72,6 +74,56 @@ export default function Auth() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  // Google Sign-In Handler
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+
+      const user = result.user;
+
+      // Check if user document exists
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      // If new Google user, create a document (defaulting role to "donor" -- you can prompt later)
+      if (!userDoc.exists()) {
+        await setDoc(userDocRef, {
+          name: user.displayName ?? "",
+          email: user.email ?? "",
+          role: "donor", // Or let user choose after login, depending on your workflow
+          location: "",
+          phone: "",
+          verified: user.emailVerified ?? false,
+          joinedAt: serverTimestamp(),
+        });
+      }
+
+      // Fetch the latest role (for redirect)
+      const freshUserDoc = await getDoc(userDocRef);
+      const role = freshUserDoc.data()?.role;
+
+      setLoading(false);
+
+      // Redirect based on role
+      if (role === "donor") {
+        navigate("/dashboard/donor");
+      } else if (role === "recipient") {
+        navigate("/dashboard/recipient");
+      } else if (role === "volunteer") {
+        navigate("/dashboard/volunteer");
+      } else {
+        setError("Invalid role. Please contact support.");
+      }
+    } catch (err: any) {
+      setError(err.message || "Google sign-in failed.");
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -93,7 +145,6 @@ export default function Auth() {
         if (userDoc.exists()) {
           const role = userDoc.data().role;
           setLoading(false);
-          // Redirect ONLY based on role (no fallback needed, as only these roles are valid)
           if (role === "donor") {
             navigate("/dashboard/donor");
           } else if (role === "recipient") {
@@ -506,7 +557,13 @@ export default function Auth() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 mt-6">
-              <button className="inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-gray-500 transition-colors bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50">
+              <button
+                type="button"
+                className="inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-gray-500 transition-colors bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+                onClick={handleGoogleSignIn}
+                disabled={loading}
+                aria-label="Continue with Google"
+              >
                 {/* Google SVG */}
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path
@@ -528,7 +585,13 @@ export default function Auth() {
                 </svg>
                 <span className="ml-2">Google</span>
               </button>
-              <button className="inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-gray-500 transition-colors bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50">
+              <button
+                type="button"
+                className="inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-gray-500 transition-colors bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+                disabled={loading}
+                aria-label="Continue with Facebook"
+                // onClick={handleFacebookSignIn} // implement similar if needed
+              >
                 {/* Facebook SVG */}
                 <svg
                   className="w-5 h-5"
