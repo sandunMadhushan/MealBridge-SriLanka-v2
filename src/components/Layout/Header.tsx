@@ -23,25 +23,44 @@ const navigation = [
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  // Ref on the button (not the menu itself) for fine placement
+  const profileButtonRef = useRef<HTMLButtonElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, loading } = useAuth();
-  // For dashboard redirection & menu
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
 
   useEffect(() => {
+    // Close menu on outside click
     if (!profileMenuOpen) return;
     function onClick(e: MouseEvent) {
       if (
         profileMenuRef.current &&
-        !profileMenuRef.current.contains(e.target as Node)
+        !profileMenuRef.current.contains(e.target as Node) &&
+        profileButtonRef.current &&
+        !profileButtonRef.current.contains(e.target as Node)
       ) {
         setProfileMenuOpen(false);
       }
     }
     window.addEventListener("mousedown", onClick);
     return () => window.removeEventListener("mousedown", onClick);
+  }, [profileMenuOpen]);
+
+  // Calculate dropdown menu position under the profile button for perfect alignment
+  useEffect(() => {
+    if (profileMenuOpen && profileButtonRef.current) {
+      const rect = profileButtonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY + 6, // 6px margin below button
+        left: rect.left + window.scrollX,
+      });
+    }
   }, [profileMenuOpen]);
 
   const fetchUserRole = async () => {
@@ -54,9 +73,7 @@ export default function Header() {
         setUserRole(role);
         return role;
       }
-    } catch (e) {
-      /* silent */
-    }
+    } catch (e) {}
     return null;
   };
 
@@ -117,6 +134,7 @@ export default function Header() {
             {!loading && user ? (
               <div className="relative flex items-center space-x-2">
                 <button
+                  ref={profileButtonRef}
                   className="flex items-center space-x-1 focus:outline-none group"
                   onClick={async () => {
                     setProfileMenuOpen((v) => !v);
@@ -125,6 +143,7 @@ export default function Header() {
                   aria-haspopup="true"
                   aria-expanded={profileMenuOpen}
                   aria-label="Open user menu"
+                  type="button"
                 >
                   {user.photoURL ? (
                     <img
@@ -142,7 +161,22 @@ export default function Header() {
                 {profileMenuOpen && (
                   <div
                     ref={profileMenuRef}
-                    className="absolute right-0 z-40 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg w-44"
+                    className="z-40 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg w-44"
+                    style={{
+                      position: "absolute",
+                      top:
+                        dropdownPosition && dropdownPosition.top
+                          ? dropdownPosition.top -
+                            profileButtonRef.current!.offsetParent!.getBoundingClientRect()
+                              .top
+                          : "100%",
+                      left:
+                        dropdownPosition && dropdownPosition.left
+                          ? dropdownPosition.left -
+                            profileButtonRef.current!.offsetParent!.getBoundingClientRect()
+                              .left
+                          : undefined,
+                    }}
                   >
                     <button
                       className="block w-full px-4 py-2 text-left text-gray-700 hover:bg-primary-50"
@@ -238,6 +272,10 @@ export default function Header() {
                       <div
                         ref={profileMenuRef}
                         className="w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg"
+                        style={{
+                          position: "absolute",
+                          left: 0,
+                        }}
                       >
                         <button
                           className="block w-full px-4 py-2 text-left text-gray-700 hover:bg-primary-50"
