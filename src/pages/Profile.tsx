@@ -5,6 +5,7 @@ import { getDoc, doc, updateDoc } from "firebase/firestore";
 import { updateProfile } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { cn } from "../utils/cn";
+import { CameraIcon } from "@heroicons/react/24/outline";
 
 export default function Profile() {
   const { user } = useAuth();
@@ -21,7 +22,7 @@ export default function Profile() {
   const [saveLoading, setSaveLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [newPhotoFile, setNewPhotoFile] = useState<File | null>(null); // New photo file
+  const [newPhotoFile, setNewPhotoFile] = useState<File | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -54,11 +55,9 @@ export default function Profile() {
     setProfile((p) => ({ ...p, [field]: value }));
   };
 
-  // Handle file input change to update photo file state
   const handlePhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setNewPhotoFile(e.target.files[0]);
-      // Show preview instantly (optional)
       setProfile((p) => ({
         ...p,
         photoURL: URL.createObjectURL(e.target.files![0]),
@@ -71,11 +70,8 @@ export default function Profile() {
     setSaveLoading(true);
     setError(null);
     setSuccess(null);
-
     try {
       let photoURLToSave = profile.photoURL;
-
-      // If new photo selected, upload to Firebase Storage
       if (newPhotoFile) {
         const photoRef = ref(
           storage,
@@ -84,21 +80,16 @@ export default function Profile() {
         await uploadBytes(photoRef, newPhotoFile);
         photoURLToSave = await getDownloadURL(photoRef);
       }
-
-      // Update Firestore
       await updateDoc(doc(db, "users", user.uid), {
         name: profile.name,
         location: profile.location,
         phone: profile.phone,
         photoURL: photoURLToSave,
       });
-
-      // Update Firebase Auth displayName and photoURL
       await updateProfile(auth.currentUser!, {
         displayName: profile.name,
         photoURL: photoURLToSave,
       });
-
       setProfile((p) => ({ ...p, photoURL: photoURLToSave }));
       setNewPhotoFile(null);
       setSuccess("Profile updated!");
@@ -126,18 +117,39 @@ export default function Profile() {
         <div className="flex flex-col items-center mb-8">
           <label
             htmlFor="photo-upload"
-            className="flex items-center justify-center w-24 h-24 mb-3 overflow-hidden rounded-full cursor-pointer bg-primary-100"
-            title="Click to change profile picture"
+            className={cn(
+              "flex items-center justify-center w-24 h-24 mb-3 overflow-hidden rounded-full cursor-pointer bg-primary-100 group relative",
+              editMode ? "hover:ring-2 hover:ring-primary-400" : ""
+            )}
+            title={editMode ? "Click to change profile picture" : ""}
+            style={{ transition: "box-shadow 0.2s" }}
           >
             {profile.photoURL ? (
               <img
                 src={profile.photoURL}
                 alt={profile.name}
                 className="object-cover w-24 h-24 rounded-full"
+                draggable={false}
               />
             ) : (
-              <span className="text-3xl font-bold text-primary-600">
+              <span className="text-3xl font-bold select-none text-primary-600">
                 {profile.name ? profile.name[0]?.toUpperCase() : "U"}
+              </span>
+            )}
+            {editMode && (
+              <span
+                className={cn(
+                  "pointer-events-none absolute inset-0 flex items-center justify-center transition",
+                  profile.photoURL
+                    ? "opacity-0 group-hover:opacity-90 bg-black/40"
+                    : "opacity-30 group-hover:opacity-80 bg-black/20"
+                )}
+                style={{
+                  color: "#fff",
+                  fontSize: 26,
+                }}
+              >
+                <CameraIcon className="w-10 h-10 text-white" />
               </span>
             )}
             <input
@@ -228,7 +240,6 @@ export default function Profile() {
           {success && (
             <div className="text-sm text-center text-green-600">{success}</div>
           )}
-
           <div className="flex justify-end space-x-3">
             {editMode ? (
               <>
@@ -239,7 +250,7 @@ export default function Profile() {
                     setEditMode(false);
                     setError(null);
                     setSuccess(null);
-                    if (newPhotoFile) URL.revokeObjectURL(profile.photoURL); // Clean up preview url
+                    if (newPhotoFile) URL.revokeObjectURL(profile.photoURL);
                     setNewPhotoFile(null);
                   }}
                   disabled={saveLoading}
