@@ -61,7 +61,7 @@ export default function DonorDashboard() {
     badges: [],
   });
   const [loading, setLoading] = useState(true);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [_notifications, setNotifications] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) {
