@@ -60,13 +60,34 @@ export default function DonorDashboard() {
     badges: [],
   });
   const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) {
       fetchDonorData();
+      fetchNotifications();
     }
   }, [user]);
 
+  const fetchNotifications = async () => {
+    if (!user) return;
+    
+    try {
+      const notificationsQuery = query(
+        collection(db, "notifications"),
+        where("userId", "==", user.uid),
+        orderBy("createdAt", "desc")
+      );
+      const notificationsSnapshot = await getDocs(notificationsQuery);
+      const notificationsData = notificationsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setNotifications(notificationsData);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    }
+  };
   const fetchDonorData = async () => {
     if (!user) return;
 

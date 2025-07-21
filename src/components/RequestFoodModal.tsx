@@ -8,7 +8,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../firebase";
-import { collection, addDoc, Timestamp } from "firebase/firestore";
+import { collection, addDoc, Timestamp, getDoc, doc } from "firebase/firestore";
 
 interface RequestFoodModalProps {
   isOpen: boolean;
@@ -73,8 +73,12 @@ export default function RequestFoodModal({
         `${formData.pickupDate}T${formData.pickupTime}`
       );
 
+      // Get donor information from the listing
+      const listingDoc = await getDoc(doc(db, "foodListings", listing.id));
+      const listingData = listingDoc.data();
+      const donorId = listingData?.donor?.id;
       // Create request record
-      await addDoc(collection(db, "foodRequests"), {
+      const requestRef = await addDoc(collection(db, "foodRequests"), {
         listingId: listing.id,
         requesterId: user.uid,
         requesterName: user.displayName || user.email,
@@ -90,6 +94,18 @@ export default function RequestFoodModal({
         createdAt: Timestamp.now(),
       });
 
+      // Create notification for donor
+      if (donorId) {
+        await addDoc(collection(db, "notifications"), {
+          userId: donorId,
+          type: "food_request",
+          title: "New Food Purchase Request",
+          message: `${user.displayName || user.email} wants to buy your food: ${listing.title} (${formData.quantity} servings for LKR ${totalPrice})`,
+          read: false,
+          createdAt: Timestamp.now(),
+          relatedId: requestRef.id,
+        });
+      }
       setSuccess("Request submitted successfully! The donor will be notified.");
       setTimeout(() => {
         onClose();

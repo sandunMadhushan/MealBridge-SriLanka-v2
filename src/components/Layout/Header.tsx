@@ -10,6 +10,7 @@ import { cn } from "../../utils/cn";
 import { useAuth } from "../../context/AuthContext";
 import { signOut } from "firebase/auth";
 import { auth } from "../../firebase";
+import NotificationCenter from "../NotificationCenter";
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -67,13 +68,7 @@ export default function Header() {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex md:items-center md:space-x-4">
-            <button
-              className="p-2 text-gray-400 transition-colors hover:text-gray-500"
-              aria-label="Notifications"
-              title="Notifications"
-            >
-              <BellIcon className="w-6 h-6" />
-            </button>
+            {!loading && user && <NotificationCenter />}
 
             {!loading && user ? (
               <div className="flex items-center space-x-2">

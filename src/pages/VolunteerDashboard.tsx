@@ -63,14 +63,35 @@ export default function VolunteerDashboard() {
     badges: [],
   });
   const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) {
       fetchVolunteerData();
+      fetchNotifications();
     }
     // eslint-disable-next-line
   }, [user]);
 
+  const fetchNotifications = async () => {
+    if (!user) return;
+    
+    try {
+      const notificationsQuery = query(
+        collection(db, "notifications"),
+        where("userId", "==", user.uid),
+        orderBy("createdAt", "desc")
+      );
+      const notificationsSnapshot = await getDocs(notificationsQuery);
+      const notificationsData = notificationsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setNotifications(notificationsData);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    }
+  };
   const fetchVolunteerData = async () => {
     if (!user) return;
 
@@ -163,6 +184,21 @@ export default function VolunteerDashboard() {
         assignedAt: new Date(),
       });
 
+      // Get delivery request details to notify the requester
+      const deliveryDoc = await getDoc(doc(db, "deliveryRequests", deliveryId));
+      const deliveryData = deliveryDoc.data();
+      
+      if (deliveryData?.requesterId) {
+        await addDoc(collection(db, "notifications"), {
+          userId: deliveryData.requesterId,
+          type: "delivery_assigned",
+          title: "Volunteer Assigned",
+          message: `${user?.displayName || user?.email} will handle your delivery to ${deliveryData.deliveryAddress?.city}`,
+          read: false,
+          createdAt: new Date(),
+          relatedId: deliveryId,
+        });
+      }
       fetchVolunteerData();
     } catch (error) {
       console.error("Error accepting delivery:", error);
@@ -176,6 +212,21 @@ export default function VolunteerDashboard() {
         completedAt: new Date(),
       });
 
+      // Get delivery request details to notify the requester
+      const deliveryDoc = await getDoc(doc(db, "deliveryRequests", deliveryId));
+      const deliveryData = deliveryDoc.data();
+      
+      if (deliveryData?.requesterId) {
+        await addDoc(collection(db, "notifications"), {
+          userId: deliveryData.requesterId,
+          type: "delivery_completed",
+          title: "Delivery Completed",
+          message: `Your food delivery to ${deliveryData.deliveryAddress?.city} has been completed successfully!`,
+          read: false,
+          createdAt: new Date(),
+          relatedId: deliveryId,
+        });
+      }
       fetchVolunteerData();
     } catch (error) {
       console.error("Error completing delivery:", error);

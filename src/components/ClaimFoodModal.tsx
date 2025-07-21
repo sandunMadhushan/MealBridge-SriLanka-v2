@@ -14,6 +14,7 @@ import {
   doc,
   updateDoc,
   Timestamp,
+  getDoc,
 } from "firebase/firestore";
 
 interface ClaimFoodModalProps {
@@ -81,8 +82,12 @@ export default function ClaimFoodModal({
         `${formData.pickupDate}T${formData.pickupTime}`
       );
 
+      // Get donor information from the listing
+      const listingDoc = await getDoc(doc(db, "foodListings", listing.id));
+      const listingData = listingDoc.data();
+      const donorId = listingData?.donor?.id;
       // Create claim record
-      await addDoc(collection(db, "foodClaims"), {
+      const claimRef = await addDoc(collection(db, "foodClaims"), {
         listingId: listing.id,
         claimantId: user.uid,
         claimantName: user.displayName || user.email,
@@ -96,6 +101,18 @@ export default function ClaimFoodModal({
         createdAt: Timestamp.now(),
       });
 
+      // Create notification for donor
+      if (donorId) {
+        await addDoc(collection(db, "notifications"), {
+          userId: donorId,
+          type: "food_claim",
+          title: "New Food Claim Request",
+          message: `${user.displayName || user.email} wants to claim your food: ${listing.title}`,
+          read: false,
+          createdAt: Timestamp.now(),
+          relatedId: claimRef.id,
+        });
+      }
       // Update listing status
       await updateDoc(doc(db, "foodListings", listing.id), {
         status: "claimed",
