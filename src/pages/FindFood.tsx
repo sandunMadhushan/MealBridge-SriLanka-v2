@@ -208,7 +208,7 @@ export default function FindFood() {
         if (selectedLocation.startsWith("Your Location")) {
           // Match user's location
           matchesLocation =
-            userLocation &&
+            !!userLocation &&
             (listing.pickupLocation?.city === userLocation.city ||
               listing.pickupLocation?.district === userLocation.district);
         } else {

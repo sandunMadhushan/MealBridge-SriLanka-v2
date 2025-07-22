@@ -1,8 +1,9 @@
 export interface User {
+  photoURL: any;
   id: string;
   email: string;
   name: string;
-  role: 'donor' | 'recipient' | 'volunteer' | 'admin';
+  role: "donor" | "recipient" | "volunteer" | "admin";
   avatar?: string;
   location: string;
   phone?: string;
@@ -38,9 +39,9 @@ export interface FoodListing {
   images: string[];
   donorId: string;
   donor: User;
-  type: 'free' | 'half-price';
+  type: "free" | "half-price";
   price?: number;
-  status: 'available' | 'claimed' | 'completed' | 'expired';
+  status: "available" | "claimed" | "completed" | "expired";
   createdAt: Date;
   claimedBy?: string;
   claimedAt?: Date;
@@ -76,7 +77,11 @@ export interface FoodCategory {
 export interface Notification {
   id: string;
   userId: string;
-  type: 'new_listing' | 'claim_approved' | 'delivery_assigned' | 'impact_milestone';
+  type:
+    | "new_listing"
+    | "claim_approved"
+    | "delivery_assigned"
+    | "impact_milestone";
   title: string;
   message: string;
   read: boolean;
@@ -97,7 +102,7 @@ export interface VolunteerRequest {
   id: string;
   listingId: string;
   volunteerId: string;
-  status: 'pending' | 'accepted' | 'completed';
+  status: "pending" | "accepted" | "completed";
   pickupTime: Date;
   deliveryTime: Date;
   notes?: string;
@@ -109,7 +114,7 @@ export interface Story {
   content: string;
   author: User;
   images: string[];
-  category: 'success' | 'impact' | 'community';
+  category: "success" | "impact" | "community";
   createdAt: Date;
   likes: number;
 }

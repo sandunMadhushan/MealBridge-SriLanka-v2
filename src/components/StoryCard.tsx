@@ -50,7 +50,10 @@ export default function StoryCard({
       {/* Image */}
       <div className="relative mb-4 overflow-hidden rounded-lg">
         <img
-          src={story.images?.[0] || "https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=800"}
+          src={
+            story.images?.[0] ||
+            "https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=800"
+          }
           alt={story.title}
           className="object-cover w-full h-48"
         />
