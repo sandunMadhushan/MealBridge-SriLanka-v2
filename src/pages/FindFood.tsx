@@ -1,4 +1,3 @@
-import { useState, useMemo } from "react";
 import { useState, useMemo, useEffect } from "react";
 import {
   MagnifyingGlassIcon,
@@ -19,7 +18,10 @@ export default function FindFood() {
   const [selectedType, setSelectedType] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [userLocation, setUserLocation] = useState<{city: string, district: string} | null>(null);
+  const [userLocation, setUserLocation] = useState<{
+    city: string;
+    district: string;
+  } | null>(null);
   const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
 
   // Modal states
@@ -46,13 +48,13 @@ export default function FindFood() {
         uniqueLocations.add(listing.pickupLocation.city);
       }
     });
-    
+
     const locationArray = ["All Locations"];
     if (userLocation) {
       locationArray.push(`Your Location (${userLocation.city})`);
     }
     locationArray.push(...Array.from(uniqueLocations).sort());
-    
+
     return locationArray;
   }, [foodListings, userLocation]);
 
@@ -62,7 +64,7 @@ export default function FindFood() {
   useEffect(() => {
     if (!locationPermissionAsked && navigator.geolocation) {
       setLocationPermissionAsked(true);
-      
+
       const requestLocation = () => {
         navigator.geolocation.getCurrentPosition(
           async (position) => {
@@ -71,23 +73,38 @@ export default function FindFood() {
               // For demo purposes, we'll simulate this with a simple mapping
               // In production, you'd use a service like Google Maps Geocoding API
               const { latitude, longitude } = position.coords;
-              
+
               // Simulate reverse geocoding based on coordinates
               let city = "Unknown";
               let district = "Unknown";
-              
+
               // Simple coordinate-based city detection for Sri Lanka
-              if (latitude >= 6.9 && latitude <= 7.0 && longitude >= 79.8 && longitude <= 80.0) {
+              if (
+                latitude >= 6.9 &&
+                latitude <= 7.0 &&
+                longitude >= 79.8 &&
+                longitude <= 80.0
+              ) {
                 city = "Colombo";
                 district = "Colombo";
-              } else if (latitude >= 7.2 && latitude <= 7.4 && longitude >= 80.6 && longitude <= 80.8) {
+              } else if (
+                latitude >= 7.2 &&
+                latitude <= 7.4 &&
+                longitude >= 80.6 &&
+                longitude <= 80.8
+              ) {
                 city = "Kandy";
                 district = "Kandy";
-              } else if (latitude >= 6.0 && latitude <= 6.1 && longitude >= 80.2 && longitude <= 80.3) {
+              } else if (
+                latitude >= 6.0 &&
+                latitude <= 6.1 &&
+                longitude >= 80.2 &&
+                longitude <= 80.3
+              ) {
                 city = "Galle";
                 district = "Galle";
               }
-              
+
               setUserLocation({ city, district });
               setSelectedLocation(`Your Location (${city})`);
             } catch (error) {
@@ -100,7 +117,7 @@ export default function FindFood() {
           {
             enableHighAccuracy: true,
             timeout: 10000,
-            maximumAge: 300000 // 5 minutes
+            maximumAge: 300000, // 5 minutes
           }
         );
       };
@@ -185,40 +202,43 @@ export default function FindFood() {
         selectedType === "All Types" ||
         (selectedType === "Free" && listing.type === "free") ||
         (selectedType === "Half Price" && listing.type === "half-price");
-      
+
       let matchesLocation = true;
       if (selectedLocation && selectedLocation !== "All Locations") {
         if (selectedLocation.startsWith("Your Location")) {
           // Match user's location
-          matchesLocation = userLocation && 
+          matchesLocation =
+            userLocation &&
             (listing.pickupLocation?.city === userLocation.city ||
-             listing.pickupLocation?.district === userLocation.district);
+              listing.pickupLocation?.district === userLocation.district);
         } else {
           matchesLocation = listing.pickupLocation?.city === selectedLocation;
         }
       }
-      
+
       return matchesSearch && matchesCategory && matchesType && matchesLocation;
     });
-    
+
     // Sort by location proximity if user location is available
     if (userLocation && selectedLocation.startsWith("Your Location")) {
       filtered.sort((a: any, b: any) => {
         const aIsUserCity = a.pickupLocation?.city === userLocation.city;
         const bIsUserCity = b.pickupLocation?.city === userLocation.city;
-        const aIsUserDistrict = a.pickupLocation?.district === userLocation.district;
-        const bIsUserDistrict = b.pickupLocation?.district === userLocation.district;
-        
+        const aIsUserDistrict =
+          a.pickupLocation?.district === userLocation.district;
+        const bIsUserDistrict =
+          b.pickupLocation?.district === userLocation.district;
+
         // Prioritize: same city > same district > others
         if (aIsUserCity && !bIsUserCity) return -1;
         if (!aIsUserCity && bIsUserCity) return 1;
         if (aIsUserDistrict && !bIsUserDistrict) return -1;
         if (!aIsUserDistrict && bIsUserDistrict) return 1;
-        
+
         return 0;
       });
     }
-    
+
     return filtered;
   }, [
     foodListings,
@@ -269,7 +289,8 @@ export default function FindFood() {
               <p>Discover fresh surplus food from your community</p>
               {userLocation && (
                 <p className="text-sm text-primary-600 mt-1">
-                  📍 Showing results near {userLocation.city}, {userLocation.district}
+                  📍 Showing results near {userLocation.city},{" "}
+                  {userLocation.district}
                 </p>
               )}
             </div>
@@ -389,9 +410,13 @@ export default function FindFood() {
             <div className="flex items-center justify-between mb-6">
               <p className="text-gray-600">
                 {filteredAndSortedListings.length} food items available
-                {userLocation && selectedLocation.startsWith("Your Location") && (
-                  <span className="text-primary-600"> (sorted by proximity)</span>
-                )}
+                {userLocation &&
+                  selectedLocation.startsWith("Your Location") && (
+                    <span className="text-primary-600">
+                      {" "}
+                      (sorted by proximity)
+                    </span>
+                  )}
               </p>
               <select className="w-auto input-field">
                 <option>Sort by: Newest</option>
