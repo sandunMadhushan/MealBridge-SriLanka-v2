@@ -4,22 +4,32 @@ import {
   TrophyIcon,
   CalendarIcon,
   MapPinIcon,
+  PlusIcon,
 } from "@heroicons/react/24/outline";
 import StoryCard from "../components/StoryCard";
+import CreateEventModal from "../components/CreateEventModal";
 import { cn } from "../utils/cn";
 
 // Firebase
 import useCollection from "../hooks/useCollection";
+import { useAuth } from "../context/AuthContext";
+import { db } from "../firebase";
+import { doc, updateDoc, arrayUnion, arrayRemove, increment } from "firebase/firestore";
 
 export default function Community() {
+  const { user } = useAuth();
   // Hooks to fetch Firestore collections
   const { documents: communityStories = [], loading: storiesLoading } =
     useCollection("communityStories");
   const { documents: users = [], loading: usersLoading } =
     useCollection("users");
+  const { documents: events = [], loading: eventsLoading } =
+    useCollection("events");
 
   const [activeTab, setActiveTab] = useState("stories");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [createEventModalOpen, setCreateEventModalOpen] = useState(false);
+  const [joinLoading, setJoinLoading] = useState<string | null>(null);
 
   const tabs = [
     { id: "stories", name: "Community Stories", icon: UserGroupIcon },
@@ -53,41 +63,18 @@ export default function Community() {
       .slice(0, 10);
   }, [users]);
 
-  const upcomingEvents = [
-    {
-      id: "1",
-      title: "Community Food Drive",
-      date: new Date("2024-02-15"),
-      location: "Colombo Central Park",
-      description:
-        "Join us for a community food collection drive to help families in need.",
-      attendees: 45,
-      image:
-        "https://images.pexels.com/photos/6646918/pexels-photo-6646918.jpeg?auto=compress&cs=tinysrgb&w=800",
-    },
-    {
-      id: "2",
-      title: "Food Safety Workshop",
-      date: new Date("2024-02-20"),
-      location: "Kandy Community Center",
-      description:
-        "Learn best practices for food handling and safety in donations.",
-      attendees: 28,
-      image:
-        "https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=800",
-    },
-    {
-      id: "3",
-      title: "Volunteer Appreciation Day",
-      date: new Date("2024-02-25"),
-      location: "Galle Beach Resort",
-      description:
-        "Celebrating our amazing volunteers with food, fun, and recognition.",
-      attendees: 67,
-      image:
-        "https://images.pexels.com/photos/1267320/pexels-photo-1267320.jpeg?auto=compress&cs=tinysrgb&w=800",
-    },
-  ];
+  // Filter upcoming events (future dates only)
+  const upcomingEvents = useMemo(() => {
+    const now = new Date();
+    return events.filter((event: any) => {
+      const eventDate = event.date?.toDate ? event.date.toDate() : new Date(event.date);
+      return eventDate > now;
+    }).sort((a: any, b: any) => {
+      const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date);
+      const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date);
+      return dateA.getTime() - dateB.getTime();
+    });
+  }, [events]);
 
   // Utility to handle Firestore Timestamp toDate() or fallbacks
   function safeDate(val: any) {
@@ -97,6 +84,41 @@ export default function Community() {
     return new Date(val);
   }
 
+  const handleJoinEvent = async (eventId: string) => {
+    if (!user) {
+      alert("Please sign in to join events.");
+      return;
+    }
+
+    setJoinLoading(eventId);
+    try {
+      const event = events.find((e: any) => e.id === eventId);
+      const isAlreadyJoined = event?.attendees?.includes(user.uid);
+
+      if (isAlreadyJoined) {
+        // Leave event
+        await updateDoc(doc(db, "events", eventId), {
+          attendees: arrayRemove(user.uid),
+          attendeeCount: increment(-1),
+        });
+      } else {
+        // Join event
+        await updateDoc(doc(db, "events", eventId), {
+          attendees: arrayUnion(user.uid),
+          attendeeCount: increment(1),
+        });
+      }
+    } catch (error) {
+      console.error("Error joining/leaving event:", error);
+      alert("Failed to update event attendance. Please try again.");
+    }
+    setJoinLoading(null);
+  };
+
+  const refreshEvents = () => {
+    // This will be called when a new event is created
+    // The useCollection hook will automatically refresh
+  };
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -319,65 +341,112 @@ export default function Community() {
               <h2 className="text-2xl font-bold text-gray-900">
                 Upcoming Events
               </h2>
-              <button className="btn-primary">Create Event</button>
+              <button 
+                className="flex items-center space-x-2 btn-primary"
+                onClick={() => setCreateEventModalOpen(true)}
+              >
+                <PlusIcon className="w-5 h-5" />
+                <span>Create Event</span>
+              </button>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {upcomingEvents.map((event) => (
-                <div
-                  key={event.id}
-                  className="transition-shadow card hover:shadow-lg"
-                >
-                  <div className="relative mb-4 overflow-hidden rounded-lg">
-                    <img
-                      src={event.image}
-                      alt={event.title}
-                      className="object-cover w-full h-48"
-                    />
-                    <div className="absolute px-2 py-1 bg-white rounded-lg top-2 right-2">
-                      <p className="text-xs font-medium text-gray-900">
-                        {event.date.toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </p>
+            {eventsLoading ? (
+              <div className="py-12 text-center text-gray-500">Loading events...</div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {upcomingEvents.map((event: any) => {
+                  const eventDate = event.date?.toDate ? event.date.toDate() : new Date(event.date);
+                  const isJoined = user && event.attendees?.includes(user.uid);
+                  const isLoading = joinLoading === event.id;
+                  
+                  return (
+                    <div
+                      key={event.id}
+                      className="transition-shadow card hover:shadow-lg"
+                    >
+                      <div className="relative mb-4 overflow-hidden rounded-lg">
+                        <img
+                          src={event.image || "https://images.pexels.com/photos/6646918/pexels-photo-6646918.jpeg?auto=compress&cs=tinysrgb&w=800"}
+                          alt={event.title}
+                          className="object-cover w-full h-48"
+                        />
+                        <div className="absolute px-2 py-1 bg-white rounded-lg top-2 right-2">
+                          <p className="text-xs font-medium text-gray-900">
+                            {eventDate.toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {event.title}
+                        </h3>
+                        <p className="text-sm text-gray-600">{event.description}</p>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center text-sm text-gray-600">
+                            <CalendarIcon className="w-4 h-4 mr-2" />
+                            {eventDate.toLocaleDateString("en-US", {
+                              weekday: "long",
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
+                          </div>
+                          <div className="flex items-center text-sm text-gray-600">
+                            <MapPinIcon className="w-4 h-4 mr-2" />
+                            {event.location}, {event.city}
+                          </div>
+                          <div className="flex items-center text-sm text-gray-600">
+                            <UserGroupIcon className="w-4 h-4 mr-2" />
+                            {event.attendeeCount || 0} attending
+                            {event.maxAttendees && ` (max ${event.maxAttendees})`}
+                          </div>
+                        </div>
+
+                        <button 
+                          className={cn(
+                            "w-full font-medium py-2 px-4 rounded-lg transition-colors duration-200",
+                            isJoined 
+                              ? "bg-red-100 text-red-700 hover:bg-red-200" 
+                              : "btn-primary"
+                          )}
+                          onClick={() => handleJoinEvent(event.id)}
+                          disabled={isLoading}
+                        >
+                          {isLoading 
+                            ? "Updating..." 
+                            : isJoined 
+                              ? "Leave Event" 
+                              : "Join Event"
+                          }
+                        </button>
+                      </div>
                     </div>
+                  );
+                })}
+                {upcomingEvents.length === 0 && (
+                  <div className="col-span-full py-12 text-center text-gray-500">
+                    <CalendarIcon className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <h3 className="mb-2 text-lg font-medium text-gray-900">No upcoming events</h3>
+                    <p className="text-gray-600">Be the first to create an event for the community!</p>
                   </div>
-
-                  <div className="space-y-3">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {event.title}
-                    </h3>
-                    <p className="text-sm text-gray-600">{event.description}</p>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <CalendarIcon className="w-4 h-4 mr-2" />
-                        {event.date.toLocaleDateString("en-US", {
-                          weekday: "long",
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <MapPinIcon className="w-4 h-4 mr-2" />
-                        {event.location}
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <UserGroupIcon className="w-4 h-4 mr-2" />
-                        {event.attendees} attending
-                      </div>
-                    </div>
-
-                    <button className="w-full btn-primary">Join Event</button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* Create Event Modal */}
+      <CreateEventModal
+        isOpen={createEventModalOpen}
+        onClose={() => setCreateEventModalOpen(false)}
+        onEventCreated={refreshEvents}
+      />
     </div>
   );
 }
