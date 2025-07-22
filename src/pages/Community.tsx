@@ -5,16 +5,18 @@ import {
   CalendarIcon,
   MapPinIcon,
   PlusIcon,
+  PencilSquareIcon,
 } from "@heroicons/react/24/outline";
 import StoryCard from "../components/StoryCard";
 import CreateEventModal from "../components/CreateEventModal";
+import CreateStoryModal from "../components/CreateStoryModal";
 import { cn } from "../utils/cn";
 
 // Firebase
 import useCollection from "../hooks/useCollection";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../firebase";
-import { doc, updateDoc, arrayUnion, arrayRemove, increment } from "firebase/firestore";
+import { doc, updateDoc, arrayUnion, arrayRemove, increment, addDoc, collection } from "firebase/firestore";
 
 export default function Community() {
   const { user } = useAuth();
@@ -29,6 +31,7 @@ export default function Community() {
   const [activeTab, setActiveTab] = useState("stories");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [createEventModalOpen, setCreateEventModalOpen] = useState(false);
+  const [createStoryModalOpen, setCreateStoryModalOpen] = useState(false);
   const [joinLoading, setJoinLoading] = useState<string | null>(null);
 
   const tabs = [
@@ -101,11 +104,48 @@ export default function Community() {
           attendees: arrayRemove(user.uid),
           attendeeCount: increment(-1),
         });
+
+        // Create notification for event creator
+        if (event.createdBy?.id && event.createdBy.id !== user.uid) {
+          await addDoc(collection(db, "notifications"), {
+            userId: event.createdBy.id,
+            type: "event_left",
+            title: "Someone Left Your Event",
+            message: `${user.displayName || user.email} left your event: ${event.title}`,
+            read: false,
+            createdAt: new Date(),
+            relatedId: eventId,
+          });
+        }
       } else {
         // Join event
         await updateDoc(doc(db, "events", eventId), {
           attendees: arrayUnion(user.uid),
           attendeeCount: increment(1),
+        });
+
+        // Create notification for event creator
+        if (event.createdBy?.id && event.createdBy.id !== user.uid) {
+          await addDoc(collection(db, "notifications"), {
+            userId: event.createdBy.id,
+            type: "event_joined",
+            title: "New Event Attendee!",
+            message: `${user.displayName || user.email} joined your event: ${event.title}`,
+            read: false,
+            createdAt: new Date(),
+            relatedId: eventId,
+          });
+        }
+
+        // Create notification for the user who joined
+        await addDoc(collection(db, "notifications"), {
+          userId: user.uid,
+          type: "event_joined_confirmation",
+          title: "Event Joined Successfully!",
+          message: `You have successfully joined: ${event.title}`,
+          read: false,
+          createdAt: new Date(),
+          relatedId: eventId,
         });
       }
     } catch (error) {
@@ -119,6 +159,12 @@ export default function Community() {
     // This will be called when a new event is created
     // The useCollection hook will automatically refresh
   };
+
+  const refreshStories = () => {
+    // This will be called when a new story is created
+    // The useCollection hook will automatically refresh
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -164,7 +210,17 @@ export default function Community() {
               <h2 className="text-2xl font-bold text-gray-900">
                 Community Stories
               </h2>
-              <div className="flex space-x-2">
+              <div className="flex items-center space-x-4">
+                {user && (
+                  <button 
+                    className="flex items-center space-x-2 btn-primary"
+                    onClick={() => setCreateStoryModalOpen(true)}
+                  >
+                    <PencilSquareIcon className="w-5 h-5" />
+                    <span>Share Your Story</span>
+                  </button>
+                )}
+                <div className="flex space-x-2">
                 {storyCategories.map((category) => (
                   <button
                     key={category}
@@ -179,6 +235,7 @@ export default function Community() {
                     {category === "all" ? "All Stories" : category}
                   </button>
                 ))}
+              </div>
               </div>
             </div>
 
@@ -446,6 +503,13 @@ export default function Community() {
         isOpen={createEventModalOpen}
         onClose={() => setCreateEventModalOpen(false)}
         onEventCreated={refreshEvents}
+      />
+
+      {/* Create Story Modal */}
+      <CreateStoryModal
+        isOpen={createStoryModalOpen}
+        onClose={() => setCreateStoryModalOpen(false)}
+        onStoryCreated={refreshStories}
       />
     </div>
   );

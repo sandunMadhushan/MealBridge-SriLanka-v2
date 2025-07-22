@@ -120,6 +120,17 @@ export default function CreateEventModal({
       });
 
       setSuccess("Event created successfully!");
+
+      // Create notification for the event creator
+      await addDoc(collection(db, "notifications"), {
+        userId: user.uid,
+        type: "event_created",
+        title: "Event Created Successfully!",
+        message: `Your event "${formData.title}" has been created and is now visible to the community.`,
+        read: false,
+        createdAt: Timestamp.now(),
+      });
+
       onEventCreated();
       setTimeout(() => {
         onClose();

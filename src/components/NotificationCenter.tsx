@@ -6,6 +6,7 @@ import {
   // ClockIcon,
   TruckIcon,
   GiftIcon,
+  CalendarIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../firebase";
@@ -32,7 +33,11 @@ interface Notification {
     | "request_accepted"
     | "request_declined"
     | "delivery_assigned"
-    | "delivery_completed";
+    | "delivery_completed"
+    | "event_created"
+    | "event_joined"
+    | "event_left"
+    | "event_joined_confirmation";
   title: string;
   message: string;
   read: boolean;
@@ -236,6 +241,11 @@ export default function NotificationCenter() {
       case "delivery_assigned":
       case "delivery_completed":
         return <TruckIcon className="w-5 h-5" />;
+      case "event_created":
+      case "event_joined":
+      case "event_left":
+      case "event_joined_confirmation":
+        return <CalendarIcon className="w-5 h-5" />;
       default:
         return <BellIcon className="w-5 h-5" />;
     }
