@@ -21,6 +21,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import { Link } from "react-router-dom";
 
 export default function Impact() {
   const [impactStats, setImpactStats] = useState({
@@ -328,8 +329,12 @@ export default function Impact() {
               impact for Sri Lanka's communities.
             </p>
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
-              <button className="btn-primary">Start Donating</button>
-              <button className="btn-secondary">Become a Volunteer</button>
+              <Link to="/auth" className="btn-primary">
+                Start Donating
+              </Link>
+              <Link to="/auth" className="btn-secondary">
+                Become a Volunteer
+              </Link>
               <button className="btn-outline">Share Our Impact</button>
             </div>
           </div>

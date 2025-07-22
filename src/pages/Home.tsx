@@ -19,7 +19,7 @@ import { doc, getDoc } from "firebase/firestore";
 
 export default function Home() {
   const { user } = useAuth();
-  
+
   // Modal states
   const [claimModalOpen, setClaimModalOpen] = useState(false);
   const [requestModalOpen, setRequestModalOpen] = useState(false);
@@ -281,9 +281,9 @@ export default function Home() {
                   listing={listing}
                   foodCategories={foodCategories}
                   users={users}
-                   onClaim={() => handleClaim(listing)}
-                   onRequest={() => handleRequest(listing)}
-                   onDelivery={() => handleDelivery(listing)}
+                  onClaim={() => handleClaim(listing)}
+                  onRequest={() => handleRequest(listing)}
+                  onDelivery={() => handleDelivery(listing)}
                 />
               ))}
             </div>
@@ -345,7 +345,7 @@ export default function Home() {
               Join MealBridge Today
             </Link>
             <Link
-              to="/volunteer"
+              to="/auth"
               className="px-8 py-3 text-lg text-white border-white btn-outline hover:bg-white hover:text-secondary-600"
             >
               Become a Volunteer
