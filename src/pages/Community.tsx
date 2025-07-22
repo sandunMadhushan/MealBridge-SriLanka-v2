@@ -32,6 +32,7 @@ export default function Community() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [createEventModalOpen, setCreateEventModalOpen] = useState(false);
   const [createStoryModalOpen, setCreateStoryModalOpen] = useState(false);
+  const [editingStory, setEditingStory] = useState<any>(null);
   const [joinLoading, setJoinLoading] = useState<string | null>(null);
 
   const tabs = [
@@ -86,6 +87,16 @@ export default function Community() {
     if (val.toDate) return val.toDate();
     return new Date(val);
   }
+
+  const handleEditStory = (story: any) => {
+    setEditingStory(story);
+    setCreateStoryModalOpen(true);
+  };
+
+  const handleCloseStoryModal = () => {
+    setCreateStoryModalOpen(false);
+    setEditingStory(null);
+  };
 
   const handleJoinEvent = async (eventId: string) => {
     if (!user) {
@@ -214,7 +225,10 @@ export default function Community() {
                 {user && (
                   <button 
                     className="flex items-center space-x-2 btn-primary"
-                    onClick={() => setCreateStoryModalOpen(true)}
+                    onClick={() => {
+                      setEditingStory(null);
+                      setCreateStoryModalOpen(true);
+                    }}
                   >
                     <PencilSquareIcon className="w-5 h-5" />
                     <span>Share Your Story</span>
@@ -248,6 +262,8 @@ export default function Community() {
                     key={story.id}
                     story={story}
                     onLike={(id) => console.log("Like story:", id)}
+                    onEdit={handleEditStory}
+                    currentUserId={user?.uid}
                   />
                 ))}
               </div>
@@ -272,11 +288,19 @@ export default function Community() {
                 {volunteers.map((volunteer: any) => (
                   <div key={volunteer.id} className="card">
                     <div className="flex items-center mb-4 space-x-4">
-                      <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary-100">
-                        <span className="text-xl font-bold text-primary-600">
-                          {volunteer.name?.charAt(0)}
-                        </span>
-                      </div>
+                      {volunteer.photoURL ? (
+                        <img
+                          src={volunteer.photoURL}
+                          alt={volunteer.name}
+                          className="object-cover w-16 h-16 rounded-full"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary-100">
+                          <span className="text-xl font-bold text-primary-600">
+                            {volunteer.name?.charAt(0) || "U"}
+                          </span>
+                        </div>
+                      )}
                       <div>
                         <h3 className="font-semibold text-gray-900">
                           {volunteer.name}
@@ -368,11 +392,19 @@ export default function Community() {
                       >
                         {index + 1}
                       </div>
-                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary-100">
-                        <span className="font-medium text-primary-600">
-                          {user.name?.charAt(0)}
-                        </span>
-                      </div>
+                      {user.photoURL ? (
+                        <img
+                          src={user.photoURL}
+                          alt={user.name}
+                          className="object-cover w-12 h-12 rounded-full"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary-100">
+                          <span className="font-medium text-primary-600">
+                            {user.name?.charAt(0) || "U"}
+                          </span>
+                        </div>
+                      )}
                       <div>
                         <p className="font-medium text-gray-900">{user.name}</p>
                         <p className="text-sm text-gray-500">{user.location}</p>
@@ -508,8 +540,9 @@ export default function Community() {
       {/* Create Story Modal */}
       <CreateStoryModal
         isOpen={createStoryModalOpen}
-        onClose={() => setCreateStoryModalOpen(false)}
+        onClose={handleCloseStoryModal}
         onStoryCreated={refreshStories}
+        editingStory={editingStory}
       />
     </div>
   );

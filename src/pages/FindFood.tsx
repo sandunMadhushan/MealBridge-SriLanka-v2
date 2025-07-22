@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   MagnifyingGlassIcon,
   FunnelIcon,
@@ -18,6 +19,8 @@ export default function FindFood() {
   const [selectedType, setSelectedType] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [userLocation, setUserLocation] = useState<{city: string, district: string} | null>(null);
+  const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
 
   // Modal states
   const [claimModalOpen, setClaimModalOpen] = useState(false);
@@ -35,16 +38,77 @@ export default function FindFood() {
   const { documents: users = [], loading: usersLoading } =
     useCollection("users");
 
-  const locations = [
-    "All Locations",
-    "Colombo",
-    "Kandy",
-    "Galle",
-    "Jaffna",
-    "Negombo",
-  ];
+  // Get unique locations from food listings
+  const locations = useMemo(() => {
+    const uniqueLocations = new Set<string>();
+    foodListings.forEach((listing: any) => {
+      if (listing.pickupLocation?.city) {
+        uniqueLocations.add(listing.pickupLocation.city);
+      }
+    });
+    
+    const locationArray = ["All Locations"];
+    if (userLocation) {
+      locationArray.push(`Your Location (${userLocation.city})`);
+    }
+    locationArray.push(...Array.from(uniqueLocations).sort());
+    
+    return locationArray;
+  }, [foodListings, userLocation]);
+
   const types = ["All Types", "Free", "Half Price"];
 
+  // Request location permission on component mount
+  useEffect(() => {
+    if (!locationPermissionAsked && navigator.geolocation) {
+      setLocationPermissionAsked(true);
+      
+      const requestLocation = () => {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            try {
+              // Use reverse geocoding to get city/district
+              // For demo purposes, we'll simulate this with a simple mapping
+              // In production, you'd use a service like Google Maps Geocoding API
+              const { latitude, longitude } = position.coords;
+              
+              // Simulate reverse geocoding based on coordinates
+              let city = "Unknown";
+              let district = "Unknown";
+              
+              // Simple coordinate-based city detection for Sri Lanka
+              if (latitude >= 6.9 && latitude <= 7.0 && longitude >= 79.8 && longitude <= 80.0) {
+                city = "Colombo";
+                district = "Colombo";
+              } else if (latitude >= 7.2 && latitude <= 7.4 && longitude >= 80.6 && longitude <= 80.8) {
+                city = "Kandy";
+                district = "Kandy";
+              } else if (latitude >= 6.0 && latitude <= 6.1 && longitude >= 80.2 && longitude <= 80.3) {
+                city = "Galle";
+                district = "Galle";
+              }
+              
+              setUserLocation({ city, district });
+              setSelectedLocation(`Your Location (${city})`);
+            } catch (error) {
+              console.error("Error getting location details:", error);
+            }
+          },
+          (error) => {
+            console.log("Location permission denied or error:", error);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000 // 5 minutes
+          }
+        );
+      };
+
+      // Ask for permission with a small delay to ensure UI is ready
+      setTimeout(requestLocation, 1000);
+    }
+  }, [locationPermissionAsked]);
   // For today's reference date since you included one:
   // const now = new Date("2025-07-18T15:46:00+05:30");
   // To always use real time:
@@ -108,8 +172,8 @@ export default function FindFood() {
   //   return null;
   // }
 
-  const filteredListings = useMemo(() => {
-    return foodListings.filter((listing: any) => {
+  const filteredAndSortedListings = useMemo(() => {
+    let filtered = foodListings.filter((listing: any) => {
       const matchesSearch =
         listing.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         listing.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -121,18 +185,48 @@ export default function FindFood() {
         selectedType === "All Types" ||
         (selectedType === "Free" && listing.type === "free") ||
         (selectedType === "Half Price" && listing.type === "half-price");
-      const matchesLocation =
-        !selectedLocation ||
-        selectedLocation === "All Locations" ||
-        listing.pickupLocation?.city === selectedLocation;
+      
+      let matchesLocation = true;
+      if (selectedLocation && selectedLocation !== "All Locations") {
+        if (selectedLocation.startsWith("Your Location")) {
+          // Match user's location
+          matchesLocation = userLocation && 
+            (listing.pickupLocation?.city === userLocation.city ||
+             listing.pickupLocation?.district === userLocation.district);
+        } else {
+          matchesLocation = listing.pickupLocation?.city === selectedLocation;
+        }
+      }
+      
       return matchesSearch && matchesCategory && matchesType && matchesLocation;
     });
+    
+    // Sort by location proximity if user location is available
+    if (userLocation && selectedLocation.startsWith("Your Location")) {
+      filtered.sort((a: any, b: any) => {
+        const aIsUserCity = a.pickupLocation?.city === userLocation.city;
+        const bIsUserCity = b.pickupLocation?.city === userLocation.city;
+        const aIsUserDistrict = a.pickupLocation?.district === userLocation.district;
+        const bIsUserDistrict = b.pickupLocation?.district === userLocation.district;
+        
+        // Prioritize: same city > same district > others
+        if (aIsUserCity && !bIsUserCity) return -1;
+        if (!aIsUserCity && bIsUserCity) return 1;
+        if (aIsUserDistrict && !bIsUserDistrict) return -1;
+        if (!aIsUserDistrict && bIsUserDistrict) return 1;
+        
+        return 0;
+      });
+    }
+    
+    return filtered;
   }, [
     foodListings,
     searchTerm,
     selectedCategory,
     selectedType,
     selectedLocation,
+    userLocation,
   ]);
 
   const handleClaim = (listing: any) => {
@@ -171,9 +265,14 @@ export default function FindFood() {
             <h1 className="mb-2 text-3xl font-bold text-gray-900">
               Find Food Near You
             </h1>
-            <p className="text-lg text-gray-600">
-              Discover fresh surplus food from your community
-            </p>
+            <div className="text-lg text-gray-600">
+              <p>Discover fresh surplus food from your community</p>
+              {userLocation && (
+                <p className="text-sm text-primary-600 mt-1">
+                  📍 Showing results near {userLocation.city}, {userLocation.district}
+                </p>
+              )}
+            </div>
           </div>
           {/* Search Bar */}
           <div className="max-w-2xl mx-auto">
@@ -289,7 +388,10 @@ export default function FindFood() {
           <div className="flex-1">
             <div className="flex items-center justify-between mb-6">
               <p className="text-gray-600">
-                {filteredListings.length} food items available
+                {filteredAndSortedListings.length} food items available
+                {userLocation && selectedLocation.startsWith("Your Location") && (
+                  <span className="text-primary-600"> (sorted by proximity)</span>
+                )}
               </p>
               <select className="w-auto input-field">
                 <option>Sort by: Newest</option>
@@ -300,9 +402,9 @@ export default function FindFood() {
             </div>
             {listingsLoading || categoriesLoading || usersLoading ? (
               <div className="py-12 text-center">Loading...</div>
-            ) : filteredListings.length > 0 ? (
+            ) : filteredAndSortedListings.length > 0 ? (
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-                {filteredListings.map((listing: any) => {
+                {filteredAndSortedListings.map((listing: any) => {
                   // fill in category/donor for each listing
                   const displayCategory = getCategoryObj(listing.category);
                   const displayDonor = getDonorObj(listing.donor);

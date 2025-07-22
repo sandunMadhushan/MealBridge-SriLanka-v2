@@ -10,10 +10,22 @@ import ImpactCard from "../components/ImpactCard";
 import FoodCard from "../components/FoodCard";
 import StoryCard from "../components/StoryCard";
 import useCollection from "../hooks/useCollection";
+import ClaimFoodModal from "../components/ClaimFoodModal";
+import RequestFoodModal from "../components/RequestFoodModal";
+import DeliveryModal from "../components/DeliveryModal";
+import { useAuth } from "../context/AuthContext";
 import { db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
 
 export default function Home() {
+  const { user } = useAuth();
+  
+  // Modal states
+  const [claimModalOpen, setClaimModalOpen] = useState(false);
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
+  const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
+  const [selectedListing, setSelectedListing] = useState<any>(null);
+
   // Load Firestore data for food listings, categories, users, stories (collections)
   const { documents: foodListings = [], loading: listingsLoading } =
     useCollection("foodListings");
@@ -59,6 +71,32 @@ export default function Home() {
   const featuredListings = foodListings.slice(0, 3);
   const featuredStories = communityStories.slice(0, 2);
 
+  const handleClaim = (listing: any) => {
+    if (!user) {
+      alert("Please sign in to claim food.");
+      return;
+    }
+    setSelectedListing(listing);
+    setClaimModalOpen(true);
+  };
+
+  const handleRequest = (listing: any) => {
+    if (!user) {
+      alert("Please sign in to request food.");
+      return;
+    }
+    setSelectedListing(listing);
+    setRequestModalOpen(true);
+  };
+
+  const handleDelivery = (listing: any) => {
+    if (!user) {
+      alert("Please sign in to request delivery.");
+      return;
+    }
+    setSelectedListing(listing);
+    setDeliveryModalOpen(true);
+  };
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -243,9 +281,9 @@ export default function Home() {
                   listing={listing}
                   foodCategories={foodCategories}
                   users={users}
-                  onClaim={(id) => console.log("Claim:", id)}
-                  onRequest={(id) => console.log("Request:", id)}
-                  onDelivery={() => console.log("Delivery requested")}
+                   onClaim={() => handleClaim(listing)}
+                   onRequest={() => handleRequest(listing)}
+                   onDelivery={() => handleDelivery(listing)}
                 />
               ))}
             </div>
@@ -315,6 +353,36 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Modals */}
+      {selectedListing && (
+        <>
+          <ClaimFoodModal
+            isOpen={claimModalOpen}
+            onClose={() => {
+              setClaimModalOpen(false);
+              setSelectedListing(null);
+            }}
+            listing={selectedListing}
+          />
+          <RequestFoodModal
+            isOpen={requestModalOpen}
+            onClose={() => {
+              setRequestModalOpen(false);
+              setSelectedListing(null);
+            }}
+            listing={selectedListing}
+          />
+          <DeliveryModal
+            isOpen={deliveryModalOpen}
+            onClose={() => {
+              setDeliveryModalOpen(false);
+              setSelectedListing(null);
+            }}
+            listing={selectedListing}
+          />
+        </>
+      )}
     </div>
   );
 }
