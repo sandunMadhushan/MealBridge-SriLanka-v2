@@ -16,17 +16,34 @@ import { cn } from "../utils/cn";
 import useCollection from "../hooks/useCollection";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../firebase";
-import { doc, updateDoc, arrayUnion, arrayRemove, increment, addDoc, collection } from "firebase/firestore";
+import {
+  doc,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
+  increment,
+  addDoc,
+  collection,
+} from "firebase/firestore";
 
 export default function Community() {
   const { user } = useAuth();
-  // Hooks to fetch Firestore collections
-  const { documents: communityStories = [], loading: storiesLoading } =
-    useCollection("communityStories");
+
+  // Hooks to fetch Firestore collections with refresh functionality
+  const {
+    documents: communityStories = [],
+    loading: storiesLoading,
+    refresh: refreshStories,
+  } = useCollection("communityStories");
+
   const { documents: users = [], loading: usersLoading } =
     useCollection("users");
-  const { documents: events = [], loading: eventsLoading } =
-    useCollection("events");
+
+  const {
+    documents: events = [],
+    loading: eventsLoading,
+    refresh: refreshEvents,
+  } = useCollection("events");
 
   const [activeTab, setActiveTab] = useState("stories");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -70,14 +87,18 @@ export default function Community() {
   // Filter upcoming events (future dates only)
   const upcomingEvents = useMemo(() => {
     const now = new Date();
-    return events.filter((event: any) => {
-      const eventDate = event.date?.toDate ? event.date.toDate() : new Date(event.date);
-      return eventDate > now;
-    }).sort((a: any, b: any) => {
-      const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date);
-      const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date);
-      return dateA.getTime() - dateB.getTime();
-    });
+    return events
+      .filter((event: any) => {
+        const eventDate = event.date?.toDate
+          ? event.date.toDate()
+          : new Date(event.date);
+        return eventDate > now;
+      })
+      .sort((a: any, b: any) => {
+        const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date);
+        const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date);
+        return dateA.getTime() - dateB.getTime();
+      });
   }, [events]);
 
   // Utility to handle Firestore Timestamp toDate() or fallbacks
@@ -122,7 +143,9 @@ export default function Community() {
             userId: event.createdBy.id,
             type: "event_left",
             title: "Someone Left Your Event",
-            message: `${user.displayName || user.email} left your event: ${event.title}`,
+            message: `${user.displayName || user.email} left your event: ${
+              event.title
+            }`,
             read: false,
             createdAt: new Date(),
             relatedId: eventId,
@@ -141,7 +164,9 @@ export default function Community() {
             userId: event.createdBy.id,
             type: "event_joined",
             title: "New Event Attendee!",
-            message: `${user.displayName || user.email} joined your event: ${event.title}`,
+            message: `${user.displayName || user.email} joined your event: ${
+              event.title
+            }`,
             read: false,
             createdAt: new Date(),
             relatedId: eventId,
@@ -159,21 +184,14 @@ export default function Community() {
           relatedId: eventId,
         });
       }
+
+      // Refresh events after join/leave
+      refreshEvents();
     } catch (error) {
       console.error("Error joining/leaving event:", error);
       alert("Failed to update event attendance. Please try again.");
     }
     setJoinLoading(null);
-  };
-
-  const refreshEvents = () => {
-    // This will be called when a new event is created
-    // The useCollection hook will automatically refresh
-  };
-
-  const refreshStories = () => {
-    // This will be called when a new story is created
-    // The useCollection hook will automatically refresh
   };
 
   return (
@@ -223,7 +241,7 @@ export default function Community() {
               </h2>
               <div className="flex items-center space-x-4">
                 {user && (
-                  <button 
+                  <button
                     className="flex items-center space-x-2 btn-primary"
                     onClick={() => {
                       setEditingStory(null);
@@ -235,21 +253,21 @@ export default function Community() {
                   </button>
                 )}
                 <div className="flex space-x-2">
-                {storyCategories.map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedCategory(category)}
-                    className={cn(
-                      "px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize",
-                      selectedCategory === category
-                        ? "bg-primary-100 text-primary-800"
-                        : "bg-white text-gray-600 hover:bg-gray-100"
-                    )}
-                  >
-                    {category === "all" ? "All Stories" : category}
-                  </button>
-                ))}
-              </div>
+                  {storyCategories.map((category) => (
+                    <button
+                      key={category}
+                      onClick={() => setSelectedCategory(category)}
+                      className={cn(
+                        "px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize",
+                        selectedCategory === category
+                          ? "bg-primary-100 text-primary-800"
+                          : "bg-white text-gray-600 hover:bg-gray-100"
+                      )}
+                    >
+                      {category === "all" ? "All Stories" : category}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -430,7 +448,7 @@ export default function Community() {
               <h2 className="text-2xl font-bold text-gray-900">
                 Upcoming Events
               </h2>
-              <button 
+              <button
                 className="flex items-center space-x-2 btn-primary"
                 onClick={() => setCreateEventModalOpen(true)}
               >
@@ -440,14 +458,18 @@ export default function Community() {
             </div>
 
             {eventsLoading ? (
-              <div className="py-12 text-center text-gray-500">Loading events...</div>
+              <div className="py-12 text-center text-gray-500">
+                Loading events...
+              </div>
             ) : (
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {upcomingEvents.map((event: any) => {
-                  const eventDate = event.date?.toDate ? event.date.toDate() : new Date(event.date);
+                  const eventDate = event.date?.toDate
+                    ? event.date.toDate()
+                    : new Date(event.date);
                   const isJoined = user && event.attendees?.includes(user.uid);
                   const isLoading = joinLoading === event.id;
-                  
+
                   return (
                     <div
                       key={event.id}
@@ -455,7 +477,10 @@ export default function Community() {
                     >
                       <div className="relative mb-4 overflow-hidden rounded-lg">
                         <img
-                          src={event.image || "https://images.pexels.com/photos/6646918/pexels-photo-6646918.jpeg?auto=compress&cs=tinysrgb&w=800"}
+                          src={
+                            event.image ||
+                            "https://images.pexels.com/photos/6646918/pexels-photo-6646918.jpeg?auto=compress&cs=tinysrgb&w=800"
+                          }
                           alt={event.title}
                           className="object-cover w-full h-48"
                         />
@@ -473,7 +498,9 @@ export default function Community() {
                         <h3 className="text-lg font-semibold text-gray-900">
                           {event.title}
                         </h3>
-                        <p className="text-sm text-gray-600">{event.description}</p>
+                        <p className="text-sm text-gray-600">
+                          {event.description}
+                        </p>
 
                         <div className="space-y-2">
                           <div className="flex items-center text-sm text-gray-600">
@@ -492,26 +519,26 @@ export default function Community() {
                           <div className="flex items-center text-sm text-gray-600">
                             <UserGroupIcon className="w-4 h-4 mr-2" />
                             {event.attendeeCount || 0} attending
-                            {event.maxAttendees && ` (max ${event.maxAttendees})`}
+                            {event.maxAttendees &&
+                              ` (max ${event.maxAttendees})`}
                           </div>
                         </div>
 
-                        <button 
+                        <button
                           className={cn(
                             "w-full font-medium py-2 px-4 rounded-lg transition-colors duration-200",
-                            isJoined 
-                              ? "bg-red-100 text-red-700 hover:bg-red-200" 
+                            isJoined
+                              ? "bg-red-100 text-red-700 hover:bg-red-200"
                               : "btn-primary"
                           )}
                           onClick={() => handleJoinEvent(event.id)}
                           disabled={isLoading}
                         >
-                          {isLoading 
-                            ? "Updating..." 
-                            : isJoined 
-                              ? "Leave Event" 
-                              : "Join Event"
-                          }
+                          {isLoading
+                            ? "Updating..."
+                            : isJoined
+                            ? "Leave Event"
+                            : "Join Event"}
                         </button>
                       </div>
                     </div>
@@ -520,8 +547,12 @@ export default function Community() {
                 {upcomingEvents.length === 0 && (
                   <div className="col-span-full py-12 text-center text-gray-500">
                     <CalendarIcon className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <h3 className="mb-2 text-lg font-medium text-gray-900">No upcoming events</h3>
-                    <p className="text-gray-600">Be the first to create an event for the community!</p>
+                    <h3 className="mb-2 text-lg font-medium text-gray-900">
+                      No upcoming events
+                    </h3>
+                    <p className="text-gray-600">
+                      Be the first to create an event for the community!
+                    </p>
                   </div>
                 )}
               </div>
