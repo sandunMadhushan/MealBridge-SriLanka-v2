@@ -1,7 +1,7 @@
 import {
   ShieldCheckIcon,
   ClockIcon,
-  ThermometerIcon,
+  Bars3BottomLeftIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
   DocumentTextIcon,
@@ -22,7 +22,7 @@ export default function FoodSafety() {
     },
     {
       title: "Temperature Control",
-      icon: <ThermometerIcon className="w-6 h-6" />,
+      icon: <Bars3BottomLeftIcon className="w-6 h-6" />,
       description: "Maintain proper temperatures to prevent bacterial growth",
       details: [
         "Keep cold foods below 4°C (40°F)",
@@ -34,7 +34,8 @@ export default function FoodSafety() {
     {
       title: "Hygiene Standards",
       icon: <ShieldCheckIcon className="w-6 h-6" />,
-      description: "Follow proper hygiene practices during preparation and handling",
+      description:
+        "Follow proper hygiene practices during preparation and handling",
       details: [
         "Wash hands thoroughly before handling food",
         "Use clean utensils and containers",
@@ -89,8 +90,8 @@ export default function FoodSafety() {
               Food Safety Guidelines
             </h1>
             <p className="max-w-3xl mx-auto text-xl text-gray-600">
-              Ensuring safe, nutritious food for everyone in our community through 
-              proper handling, storage, and distribution practices.
+              Ensuring safe, nutritious food for everyone in our community
+              through proper handling, storage, and distribution practices.
             </p>
           </div>
         </div>
@@ -137,13 +138,19 @@ export default function FoodSafety() {
               </h2>
             </div>
             <p className="mb-6 text-gray-600">
-              Always clearly label any of these common allergens present in your food donations:
+              Always clearly label any of these common allergens present in your
+              food donations:
             </p>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
               {allergens.map((allergen, index) => (
-                <div key={index} className="flex items-center p-3 border border-orange-200 rounded-lg bg-orange-50">
+                <div
+                  key={index}
+                  className="flex items-center p-3 border border-orange-200 rounded-lg bg-orange-50"
+                >
                   <ExclamationTriangleIcon className="w-4 h-4 mr-2 text-orange-500" />
-                  <span className="text-sm font-medium text-orange-800">{allergen}</span>
+                  <span className="text-sm font-medium text-orange-800">
+                    {allergen}
+                  </span>
                 </div>
               ))}
             </div>
@@ -160,11 +167,15 @@ export default function FoodSafety() {
               </h2>
             </div>
             <p className="mb-6 text-gray-600">
-              For the safety of our community, we cannot accept the following items:
+              For the safety of our community, we cannot accept the following
+              items:
             </p>
             <div className="space-y-3">
               {prohibitedItems.map((item, index) => (
-                <div key={index} className="flex items-start p-3 border border-red-200 rounded-lg bg-red-50">
+                <div
+                  key={index}
+                  className="flex items-start p-3 border border-red-200 rounded-lg bg-red-50"
+                >
                   <ExclamationTriangleIcon className="w-4 h-4 mt-0.5 mr-3 text-red-500 flex-shrink-0" />
                   <span className="text-sm text-red-800">{item}</span>
                 </div>
@@ -178,23 +189,32 @@ export default function FoodSafety() {
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
             <div className="card">
               <div className="flex items-center mb-4 space-x-3">
-                <ThermometerIcon className="w-6 h-6 text-blue-500" />
-                <h3 className="text-xl font-semibold text-gray-900">Cold Foods</h3>
+                <Bars3BottomLeftIcon className="w-6 h-6 text-blue-500" />
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Cold Foods
+                </h3>
               </div>
               <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
-                <p className="mb-2 text-2xl font-bold text-blue-800">Below 4°C (40°F)</p>
+                <p className="mb-2 text-2xl font-bold text-blue-800">
+                  Below 4°C (40°F)
+                </p>
                 <p className="text-sm text-blue-700">
-                  Dairy products, fresh meat, seafood, prepared salads, and cut fruits
+                  Dairy products, fresh meat, seafood, prepared salads, and cut
+                  fruits
                 </p>
               </div>
             </div>
             <div className="card">
               <div className="flex items-center mb-4 space-x-3">
-                <ThermometerIcon className="w-6 h-6 text-red-500" />
-                <h3 className="text-xl font-semibold text-gray-900">Hot Foods</h3>
+                <Bars3BottomLeftIcon className="w-6 h-6 text-red-500" />
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Hot Foods
+                </h3>
               </div>
               <div className="p-4 border border-red-200 rounded-lg bg-red-50">
-                <p className="mb-2 text-2xl font-bold text-red-800">Above 60°C (140°F)</p>
+                <p className="mb-2 text-2xl font-bold text-red-800">
+                  Above 60°C (140°F)
+                </p>
                 <p className="text-sm text-red-700">
                   Cooked meals, soups, stews, and other prepared hot dishes
                 </p>
@@ -214,13 +234,18 @@ export default function FoodSafety() {
             </div>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
               <div className="p-4 border border-purple-200 rounded-lg bg-purple-50">
-                <h4 className="mb-2 font-semibold text-purple-800">2 Hour Rule</h4>
+                <h4 className="mb-2 font-semibold text-purple-800">
+                  2 Hour Rule
+                </h4>
                 <p className="text-sm text-purple-700">
-                  Don't leave perishable food at room temperature for more than 2 hours
+                  Don't leave perishable food at room temperature for more than
+                  2 hours
                 </p>
               </div>
               <div className="p-4 border border-purple-200 rounded-lg bg-purple-50">
-                <h4 className="mb-2 font-semibold text-purple-800">1 Hour Rule</h4>
+                <h4 className="mb-2 font-semibold text-purple-800">
+                  1 Hour Rule
+                </h4>
                 <p className="text-sm text-purple-700">
                   In hot weather (above 32°C), reduce this to 1 hour maximum
                 </p>
@@ -243,8 +268,8 @@ export default function FoodSafety() {
               Report Food Safety Concerns
             </h3>
             <p className="mb-6 text-gray-700">
-              If you receive food that appears unsafe or have concerns about food safety, 
-              please report it immediately.
+              If you receive food that appears unsafe or have concerns about
+              food safety, please report it immediately.
             </p>
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
               <button className="px-6 py-3 font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">
