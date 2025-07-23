@@ -12,6 +12,12 @@ import RecipientDashboard from "./pages/RecipientDashboard";
 import VolunteerDashboard from "./pages/VolunteerDashboard";
 import ForgotPassword from "./pages/ForgotPassword";
 import Profile from "./pages/Profile";
+import HelpCenter from "./pages/HelpCenter";
+import FoodSafety from "./pages/FoodSafety";
+import Guidelines from "./pages/Guidelines";
+import ContactUs from "./pages/ContactUs";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 function App() {
   return (
@@ -37,6 +43,12 @@ function App() {
             />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/help" element={<HelpCenter />} />
+            <Route path="/safety" element={<FoodSafety />} />
+            <Route path="/guidelines" element={<Guidelines />} />
+            <Route path="/contact" element={<ContactUs />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
           </Routes>
         </main>
         <Footer />
