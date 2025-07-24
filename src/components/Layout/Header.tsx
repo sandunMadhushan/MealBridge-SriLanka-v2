@@ -104,7 +104,7 @@ export default function Header() {
                 <span className="text-lg font-bold text-white">M</span>
               </div>
               <span className="text-xl font-bold text-gray-900">
-                MealBridge
+                MealBridge <sup className="text-[14px]">LK</sup>
               </span>
             </Link>
           </div>
