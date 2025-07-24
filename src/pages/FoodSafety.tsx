@@ -27,7 +27,7 @@ export default function FoodSafety() {
       details: [
         "Keep cold foods below 4°C (40°F)",
         "Keep hot foods above 60°C (140°F)",
-        "Use insulated containers for transport",
+        // "Use insulated containers for transport",
         "Don't leave perishables in the temperature danger zone (4-60°C)",
       ],
     },
