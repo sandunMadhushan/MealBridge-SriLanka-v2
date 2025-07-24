@@ -322,7 +322,7 @@ export default function RecipientDashboard() {
           <div className="space-y-8">
             {/* Quick Stats */}
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div className="card">
+              {/* <div className="card">
                 <h3 className="mb-4 text-lg font-semibold text-gray-900">
                   Your Impact
                 </h3>
@@ -344,7 +344,7 @@ export default function RecipientDashboard() {
                     <span className="font-medium">Active Member</span>
                   </div>
                 </div>
-              </div>
+              </div> */}
 
               <div className="card">
                 <h3 className="mb-4 text-lg font-semibold text-gray-900">
