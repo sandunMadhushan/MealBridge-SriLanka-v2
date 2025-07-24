@@ -514,7 +514,7 @@ export default function Donate() {
                   />
                 </div>
 
-                <div>
+                {/* <div>
                   <label className="block mb-2 text-sm font-medium text-gray-700">
                     Donation Type *
                   </label>
@@ -544,7 +544,7 @@ export default function Donate() {
                       <span className="text-sm">Half Price</span>
                     </label>
                   </div>
-                </div>
+                </div> */}
               </div>
 
               {form.type === "half-price" && (
