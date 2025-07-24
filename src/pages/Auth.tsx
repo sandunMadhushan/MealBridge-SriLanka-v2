@@ -610,14 +610,14 @@ export default function Auth() {
                 >
                   I agree to the{" "}
                   <a
-                    href="#"
+                    href="/terms"
                     className="text-primary-600 hover:text-primary-500"
                   >
                     Terms of Service
                   </a>{" "}
                   and{" "}
                   <a
-                    href="#"
+                    href="/privacy"
                     className="text-primary-600 hover:text-primary-500"
                   >
                     Privacy Policy
