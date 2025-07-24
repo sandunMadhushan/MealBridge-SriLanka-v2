@@ -11,7 +11,9 @@ export default function Footer() {
               <div className="h-8 w-8 rounded-lg bg-primary-600 flex items-center justify-center">
                 <span className="text-white font-bold text-lg">M</span>
               </div>
-              <span className="text-xl font-bold">MealBridge</span>
+              <span className="text-xl font-bold">
+                MealBridge <sup className="text-[14px]">LK</sup>
+              </span>
             </div>
             <p className="text-gray-300 mb-4 max-w-md">
               Connecting surplus food with those in need across Sri Lanka.

@@ -57,7 +57,7 @@ export default function FoodSafety() {
   ];
 
   const allergens = [
-    "Gluten (wheat, barley, rye)",
+    "Gluten (wheat, barley)",
     "Dairy products (milk, cheese, yogurt)",
     "Eggs and egg products",
     "Tree nuts (almonds, walnuts, cashews)",
