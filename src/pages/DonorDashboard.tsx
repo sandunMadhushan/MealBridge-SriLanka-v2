@@ -9,6 +9,7 @@ import {
   HeartIcon,
   UsersIcon,
   DocumentCheckIcon,
+  ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../context/AuthContext";
 import { supabase, TABLES } from "../supabase";
@@ -61,11 +62,78 @@ export default function DonorDashboard() {
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [editSuccess, setEditSuccess] = useState<string | null>(null);
+  const [claimActionLoading, setClaimActionLoading] = useState<string | null>(
+    null
+  );
+  const [claimActionMessage, setClaimActionMessage] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     if (user) {
       fetchDonorData();
       fetchNotifications();
+
+      // Set up real-time subscriptions for food claims
+      const claimsSubscription = supabase
+        .channel("food_claims_donor")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: TABLES.FOOD_CLAIMS,
+          },
+          (payload) => {
+            console.log("Food claim changed:", payload);
+            // Refresh data when claims change
+            fetchDonorData();
+          }
+        )
+        .subscribe();
+
+      // Set up real-time subscriptions for food listings
+      const listingsSubscription = supabase
+        .channel("food_listings_donor")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: TABLES.FOOD_LISTINGS,
+            filter: `donor_id=eq.${user.id}`,
+          },
+          (payload) => {
+            console.log("Food listing changed:", payload);
+            // Refresh data when listings change
+            fetchDonorData();
+          }
+        )
+        .subscribe();
+
+      // Set up real-time subscriptions for notifications
+      const notificationsSubscription = supabase
+        .channel("notifications_donor")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: TABLES.NOTIFICATIONS,
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            fetchNotifications();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        claimsSubscription.unsubscribe();
+        listingsSubscription.unsubscribe();
+        notificationsSubscription.unsubscribe();
+      };
     }
     // eslint-disable-next-line
   }, [user]);
@@ -155,7 +223,9 @@ export default function DonorDashboard() {
         (d) => d.status === "completed"
       ).length;
       const totalMealsShared = processedDonations.reduce((sum, d) => {
-        const servings = parseInt(d.quantity?.match(/\d+/)?.[0] || "1");
+        // Safely handle quantity - it might be a string or number
+        const quantityStr = String(d.quantity || "1");
+        const servings = parseInt(quantityStr.match(/\d+/)?.[0] || "1");
         return sum + servings;
       }, 0);
 
@@ -270,6 +340,208 @@ export default function DonorDashboard() {
       setEditError("Update failed. " + (e.message ?? ""));
     }
     setEditLoading(false);
+  };
+
+  const handleClaimAction = async (
+    claimId: string,
+    action: "approved" | "rejected"
+  ) => {
+    setClaimActionLoading(claimId);
+    setClaimActionMessage(null);
+
+    try {
+      // First, get the claim details to access claimant info and listing details
+      const { data: claimData, error: claimError } = await supabase
+        .from(TABLES.FOOD_CLAIMS)
+        .select(
+          `
+          *,
+          food_listings!inner(
+            id,
+            title,
+            quantity,
+            status,
+            donor_id
+          )
+        `
+        )
+        .eq("id", claimId)
+        .single();
+
+      if (claimError) throw claimError;
+      if (!claimData) throw new Error("Claim not found");
+
+      // Ensure we have a valid claimant_id
+      const claimantId = claimData.claimant_id;
+      if (!claimantId) {
+        throw new Error("Invalid claim: missing claimant information");
+      }
+
+      // Map frontend actions to database status values
+      const dbStatus = action === "approved" ? "confirmed" : "cancelled";
+
+      // Update the claim status
+      const { error: updateError } = await supabase
+        .from(TABLES.FOOD_CLAIMS)
+        .update({
+          status: dbStatus,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", claimId);
+
+      if (updateError) throw updateError;
+
+      // Send notification to the claimant
+      const notificationTitle =
+        action === "approved"
+          ? "Food Claim Approved! 🎉"
+          : "Food Claim Declined";
+
+      const notificationMessage =
+        action === "approved"
+          ? `Great news! Your claim for "${claimData.food_listings.title}" has been approved. Please check your pickup details and contact the donor for coordination.`
+          : `Sorry, your claim for "${claimData.food_listings.title}" has been declined by the donor. Don't worry, there are many other food options available!`;
+
+      // Send notification to the claimant (recipient)
+      const { error: notificationError } = await supabase
+        .from(TABLES.NOTIFICATIONS)
+        .insert({
+          user_id: claimantId,
+          type: action === "approved" ? "claim_approved" : "claim_declined",
+          title: notificationTitle,
+          message: notificationMessage,
+          is_read: false,
+          created_at: new Date().toISOString(),
+          related_id: claimId,
+        });
+
+      if (notificationError) {
+        console.error(
+          "Failed to create notification for claimant:",
+          notificationError
+        );
+        // Don't throw here - the main action succeeded
+      }
+
+      // Send notification to the donor (confirmation of their action)
+      const donorNotificationTitle =
+        action === "approved" ? "Claim Approved" : "Claim Declined";
+
+      const donorNotificationMessage =
+        action === "approved"
+          ? `You approved the claim by ${
+              claimData.claimant_name || "a user"
+            } for "${
+              claimData.food_listings.title
+            }". The recipient has been notified.`
+          : `You declined the claim by ${
+              claimData.claimant_name || "a user"
+            } for "${
+              claimData.food_listings.title
+            }". The recipient has been notified.`;
+
+      const { error: donorNotificationError } = await supabase
+        .from(TABLES.NOTIFICATIONS)
+        .insert({
+          user_id: user?.id,
+          type:
+            action === "approved"
+              ? "claim_approved_donor"
+              : "claim_declined_donor",
+          title: donorNotificationTitle,
+          message: donorNotificationMessage,
+          is_read: false,
+          created_at: new Date().toISOString(),
+          related_id: claimId,
+        });
+
+      if (donorNotificationError) {
+        console.error(
+          "Failed to create notification for donor:",
+          donorNotificationError
+        );
+      }
+
+      // If approved and this claim takes all remaining quantity, mark listing as claimed
+      if (action === "approved") {
+        const currentQuantity = parseInt(
+          String(claimData.food_listings.quantity || "1")
+        );
+        const requestedQuantity = parseInt(
+          String(claimData.quantity_requested || "1")
+        );
+        const remainingQuantity = currentQuantity - requestedQuantity;
+
+        if (remainingQuantity <= 0) {
+          const { error: listingUpdateError } = await supabase
+            .from(TABLES.FOOD_LISTINGS)
+            .update({
+              status: "claimed",
+              claimed_by: claimantId,
+              claimed_at: new Date().toISOString(),
+              quantity: "0",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", claimData.food_listings.id);
+
+          if (listingUpdateError) {
+            console.error(
+              "Failed to update listing status:",
+              listingUpdateError
+            );
+          }
+        } else {
+          // Update the remaining quantity
+          const { error: listingUpdateError } = await supabase
+            .from(TABLES.FOOD_LISTINGS)
+            .update({
+              quantity: remainingQuantity.toString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", claimData.food_listings.id);
+
+          if (listingUpdateError) {
+            console.error(
+              "Failed to update listing quantity:",
+              listingUpdateError
+            );
+          }
+        }
+      }
+
+      // If rejected, we may want to reject all other pending claims for this listing if desired
+      // This depends on your business logic
+
+      // Show success message
+      const actionText = action === "approved" ? "approved" : "declined";
+      setClaimActionMessage({
+        type: "success",
+        message: `Claim ${actionText} successfully! The claimant has been notified and your dashboard has been updated.`,
+      });
+
+      // Clear success message after 5 seconds
+      setTimeout(() => {
+        setClaimActionMessage(null);
+      }, 5000);
+
+      // Refresh the claims data to show updated status immediately
+      await fetchDonorData();
+    } catch (error) {
+      console.error("Error updating claim:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      setClaimActionMessage({
+        type: "error",
+        message: `Failed to ${action} claim: ${errorMessage}. Please try again.`,
+      });
+
+      // Clear error message after 5 seconds
+      setTimeout(() => {
+        setClaimActionMessage(null);
+      }, 5000);
+    } finally {
+      setClaimActionLoading(null);
+    }
   };
 
   if (loading) {
@@ -642,6 +914,191 @@ export default function DonorDashboard() {
                   </div>
                 </div>
               ))}
+          </div>
+        )}
+
+        {activeTab === "claims" && (
+          <div className="card">
+            <h3 className="mb-6 text-lg font-semibold text-gray-900">
+              Food Claims on Your Donations
+            </h3>
+
+            {/* Success/Error Message */}
+            {claimActionMessage && (
+              <div
+                className={cn(
+                  "mb-4 p-4 rounded-lg",
+                  claimActionMessage.type === "success"
+                    ? "bg-green-50 border border-green-200 text-green-800"
+                    : "bg-red-50 border border-red-200 text-red-800"
+                )}
+              >
+                <div className="flex items-center">
+                  {claimActionMessage.type === "success" ? (
+                    <DocumentCheckIcon className="w-5 h-5 mr-2" />
+                  ) : (
+                    <ExclamationCircleIcon className="w-5 h-5 mr-2" />
+                  )}
+                  {claimActionMessage.message}
+                </div>
+              </div>
+            )}
+
+            {claims.length === 0 ? (
+              <div className="py-8 text-center">
+                <UsersIcon className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <p className="text-gray-500">
+                  No claims yet on your donations.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                        Food Item
+                      </th>
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                        Claimant
+                      </th>
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                        Quantity Requested
+                      </th>
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                        Contact Method
+                      </th>
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                        Date
+                      </th>
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {claims.map((claim) => (
+                      <tr key={claim.id}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">
+                            {claim.listingTitle}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {claim.claimantName}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {claim.claimantEmail}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
+                          {claim.quantityRequested}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {claim.contactMethod}
+                          </div>
+                          {claim.contactMethod === "phone" && claim.phone && (
+                            <div className="text-sm text-gray-500">
+                              {claim.phone}
+                            </div>
+                          )}
+                          {claim.contactMethod === "email" && claim.email && (
+                            <div className="text-sm text-gray-500">
+                              {claim.email}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={cn(
+                              "px-2 py-1 rounded-full text-xs font-medium",
+                              claim.status === "pending"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : claim.status === "confirmed"
+                                ? "bg-green-100 text-green-800"
+                                : claim.status === "cancelled"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-gray-100 text-gray-800"
+                            )}
+                          >
+                            {claim.status === "confirmed"
+                              ? "approved"
+                              : claim.status === "cancelled"
+                              ? "declined"
+                              : claim.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
+                          {formatDate(claim.createdAt)}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">
+                          {claim.status === "pending" && (
+                            <div className="flex space-x-2">
+                              <button
+                                className={cn(
+                                  "px-3 py-1 rounded-md text-sm font-medium transition-colors",
+                                  claimActionLoading === claim.id
+                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                    : "text-green-600 hover:text-green-900 hover:bg-green-50"
+                                )}
+                                onClick={() =>
+                                  handleClaimAction(claim.id, "approved")
+                                }
+                                disabled={claimActionLoading === claim.id}
+                              >
+                                {claimActionLoading === claim.id
+                                  ? "Processing..."
+                                  : "Approve"}
+                              </button>
+                              <button
+                                className={cn(
+                                  "px-3 py-1 rounded-md text-sm font-medium transition-colors",
+                                  claimActionLoading === claim.id
+                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                    : "text-red-600 hover:text-red-900 hover:bg-red-50"
+                                )}
+                                onClick={() =>
+                                  handleClaimAction(claim.id, "rejected")
+                                }
+                                disabled={claimActionLoading === claim.id}
+                              >
+                                {claimActionLoading === claim.id
+                                  ? "Processing..."
+                                  : "Reject"}
+                              </button>
+                            </div>
+                          )}
+                          {claim.status !== "pending" && (
+                            <span
+                              className={cn(
+                                "px-2 py-1 rounded-full text-xs font-medium",
+                                claim.status === "confirmed"
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              )}
+                            >
+                              {claim.status === "confirmed"
+                                ? "✓ Approved"
+                                : "✗ Declined"}
+                            </span>
+                          )}
+                          {claim.notes && (
+                            <div className="mt-1 text-xs text-gray-500">
+                              Note: {claim.notes}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 

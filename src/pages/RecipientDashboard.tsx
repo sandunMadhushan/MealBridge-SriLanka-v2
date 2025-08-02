@@ -44,6 +44,47 @@ export default function RecipientDashboard() {
     if (user) {
       fetchRecipientData();
       fetchNotifications();
+
+      // Set up real-time subscriptions for food claims
+      const claimsSubscription = supabase
+        .channel("food_claims_recipient")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: TABLES.FOOD_CLAIMS,
+            filter: `claimant_id=eq.${user.id}`,
+          },
+          (payload) => {
+            console.log("Food claim status changed:", payload);
+            // Refresh data when claims change
+            fetchRecipientData();
+          }
+        )
+        .subscribe();
+
+      // Set up real-time subscriptions for notifications
+      const notificationsSubscription = supabase
+        .channel("notifications_recipient")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: TABLES.NOTIFICATIONS,
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            fetchNotifications();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        claimsSubscription.unsubscribe();
+        notificationsSubscription.unsubscribe();
+      };
     }
   }, [user]);
 
@@ -466,7 +507,11 @@ export default function RecipientDashboard() {
                             getStatusColor(claim.status)
                           )}
                         >
-                          {claim.status}
+                          {claim.status === "confirmed"
+                            ? "approved"
+                            : claim.status === "cancelled"
+                            ? "declined"
+                            : claim.status}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
