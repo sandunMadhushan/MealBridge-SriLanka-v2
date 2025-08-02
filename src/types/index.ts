@@ -112,9 +112,18 @@ export interface Story {
   id: string;
   title: string;
   content: string;
-  author: User;
+  author?: User; // Optional for backward compatibility
+  author_id?: string; // Database field
+  author_name?: string; // Database field
+  author_email?: string; // Database field
+  author_photo_url?: string; // Database field for profile image
   images: string[];
   category: "success" | "impact" | "community";
-  createdAt: Date;
+  createdAt?: Date; // Legacy field
+  created_at?: string; // Database field
+  updated_at?: string; // Database field
   likes: number;
+  liked_by?: string[]; // Database field
+  status?: string; // Database field
+  is_featured?: boolean; // Database field
 }

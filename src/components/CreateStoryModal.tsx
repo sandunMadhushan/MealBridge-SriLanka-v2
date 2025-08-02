@@ -192,6 +192,26 @@ export default function CreateStoryModal({
         if (updateError) throw updateError;
         setSuccess("Your story has been successfully updated!");
       } else {
+        // Get the user's profile image
+        let authorPhotoUrl = user.user_metadata?.avatar_url || "";
+
+        // Try to get profile image from users table if not available from auth metadata
+        if (!authorPhotoUrl) {
+          try {
+            const { data: userData } = await supabase
+              .from("users")
+              .select("profile_image_url")
+              .eq("id", user.id)
+              .single();
+
+            if (userData?.profile_image_url) {
+              authorPhotoUrl = userData.profile_image_url;
+            }
+          } catch (error) {
+            console.log("Could not fetch user profile image:", error);
+          }
+        }
+
         // Create new story document
         const { error: insertError } = await supabase
           .from(TABLES.COMMUNITY_STORIES)
@@ -203,6 +223,7 @@ export default function CreateStoryModal({
             author_id: user.id,
             author_name: user.user_metadata?.name || user.email || "Anonymous",
             author_email: user.email,
+            author_photo_url: authorPhotoUrl,
             likes: 0, // Match DB schema field name
             liked_by: [], // Initialize as empty array
             created_at: new Date().toISOString(),
