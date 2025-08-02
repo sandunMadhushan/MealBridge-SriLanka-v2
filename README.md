@@ -132,7 +132,7 @@ MIT License — see [LICENSE](LICENSE)
 ## 📞 Contact
 
 - **Email:** mealbridge.lk@gmail.com
-- **Website:** [https://mealbridgesrilanka.netlify.app/]
+- **Website:** [https://mealbridgesrilankav2.netlify.app/]
 <!-- - **Facebook:** [Add link] -->
 
 ## 🙏 Acknowledgments
