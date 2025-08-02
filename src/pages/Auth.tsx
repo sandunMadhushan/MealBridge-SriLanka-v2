@@ -76,37 +76,51 @@ export default function Auth() {
       } = await supabase.auth.getSession();
 
       if (session?.user) {
+        console.log("Auth session detected:", {
+          userId: session.user.id,
+          email: session.user.email,
+          provider: session.user.app_metadata?.provider,
+          providers: session.user.app_metadata?.providers,
+        });
+
         // Check if user exists in our users table
-        const { data: existingUser } = await supabase
+        const { data: existingUser, error: userCheckError } = await supabase
           .from("users")
-          .select("id")
+          .select("id, role")
           .eq("id", session.user.id)
           .single();
 
+        console.log("User check result:", { existingUser, userCheckError });
+
         // If user doesn't exist in our users table, they need to complete signup
-        if (!existingUser && session.user.app_metadata?.provider === "google") {
-          setPendingGoogleUser({
-            uid: session.user.id,
-            name:
-              session.user.user_metadata?.full_name ||
-              session.user.user_metadata?.name ||
-              "",
-            email: session.user.email || "",
-          });
+        if (!existingUser) {
+          // Check if this is a Google sign-in (could be in providers array or provider field)
+          const isGoogleUser =
+            session.user.app_metadata?.provider === "google" ||
+            (session.user.app_metadata?.providers &&
+              session.user.app_metadata.providers.includes("google"));
+
+          console.log("Is Google user:", isGoogleUser);
+
+          if (isGoogleUser) {
+            setPendingGoogleUser({
+              uid: session.user.id,
+              name:
+                session.user.user_metadata?.full_name ||
+                session.user.user_metadata?.name ||
+                session.user.user_metadata?.display_name ||
+                "",
+              email: session.user.email || "",
+            });
+            console.log("Set pending Google user");
+          }
         } else if (existingUser) {
           // User exists, redirect to appropriate dashboard
-          const { data: userProfile } = await supabase
-            .from("users")
-            .select("role")
-            .eq("id", session.user.id)
-            .single();
-
-          if (userProfile) {
-            const userType = userProfile.role;
-            if (userType === "donor") navigate("/dashboard/donor");
-            else if (userType === "recipient") navigate("/dashboard/recipient");
-            else if (userType === "volunteer") navigate("/dashboard/volunteer");
-          }
+          console.log("Existing user found, redirecting to dashboard");
+          const userType = existingUser.role;
+          if (userType === "donor") navigate("/dashboard/donor");
+          else if (userType === "recipient") navigate("/dashboard/recipient");
+          else if (userType === "volunteer") navigate("/dashboard/volunteer");
         }
       }
     };
@@ -117,6 +131,7 @@ export default function Auth() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth state change:", event, session?.user?.id);
       if (event === "SIGNED_IN" && session?.user) {
         handleAuthStateChange();
       }
@@ -137,6 +152,9 @@ export default function Auth() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth`,
+        },
       });
 
       if (error) throw error;
