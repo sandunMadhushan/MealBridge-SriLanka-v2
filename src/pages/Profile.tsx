@@ -44,7 +44,10 @@ export default function Profile() {
             phone: data.phone || "",
             role: data.role || "",
             photoURL:
-              data.profile_image_url || user.user_metadata?.avatar_url || "",
+              data.profile_image_url ||
+              user.user_metadata?.avatar_url ||
+              user.user_metadata?.picture ||
+              "",
           });
         } else {
           setError("Profile not found.");

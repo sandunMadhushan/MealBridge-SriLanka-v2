@@ -103,6 +103,11 @@ export default function Auth() {
     setError(null);
     setLoading(true);
     try {
+      // Get current user data which includes Google profile image
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
+
       const { error } = await supabase.from("users").insert({
         id: pendingGoogleUser.uid,
         email: pendingGoogleUser.email,
@@ -110,7 +115,7 @@ export default function Auth() {
         phone: formData.phone || null,
         address: formData.location ? { address: formData.location } : null,
         role: selectedRole,
-        profile_image_url: null,
+        profile_image_url: currentUser?.user_metadata?.avatar_url || null,
         bio: null,
         is_verified: true,
         verified: true,

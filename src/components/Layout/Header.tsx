@@ -28,6 +28,7 @@ export default function Header() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userProfileImage, setUserProfileImage] = useState<string | null>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{
     top: number;
     left: number;
@@ -67,14 +68,16 @@ export default function Header() {
     try {
       const { data, error } = await supabase
         .from("users")
-        .select("role")
+        .select("role, profile_image_url")
         .eq("id", user.id)
         .single();
 
       if (error) throw error;
       if (data) {
         const role = data.role;
+        const profileImage = data.profile_image_url;
         setUserRole(role);
+        setUserProfileImage(profileImage);
         return role;
       }
     } catch (e) {}
@@ -94,6 +97,7 @@ export default function Header() {
     await supabase.auth.signOut();
     setProfileMenuOpen(false);
     setUserRole(null);
+    setUserProfileImage(null);
     navigate("/", { replace: true });
   };
 
@@ -145,13 +149,13 @@ export default function Header() {
                     if (!userRole) await fetchUserRole();
                   }}
                   aria-haspopup="true"
-                  aria-expanded={profileMenuOpen}
+                  aria-expanded={profileMenuOpen ? "true" : "false"}
                   aria-label="Open user menu"
                   type="button"
                 >
-                  {user.user_metadata?.avatar_url ? (
+                  {userProfileImage || user.user_metadata?.avatar_url ? (
                     <img
-                      src={user.user_metadata.avatar_url}
+                      src={userProfileImage || user.user_metadata.avatar_url}
                       alt={user.user_metadata?.full_name || "User"}
                       className="object-cover w-6 h-6 rounded-full"
                     />
@@ -261,9 +265,11 @@ export default function Header() {
                         if (!userRole) fetchUserRole();
                       }}
                     >
-                      {user.user_metadata?.avatar_url ? (
+                      {userProfileImage || user.user_metadata?.avatar_url ? (
                         <img
-                          src={user.user_metadata.avatar_url}
+                          src={
+                            userProfileImage || user.user_metadata.avatar_url
+                          }
                           alt={user.user_metadata?.full_name || "User"}
                           className="inline-block object-cover w-5 h-5 rounded-full"
                         />
