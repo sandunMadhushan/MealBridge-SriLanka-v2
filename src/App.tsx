@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Header from "./components/Layout/Header";
 import Footer from "./components/Layout/Footer";
+import LanguageNotification from "./components/LanguageNotification";
 import Home from "./pages/Home";
 import FindFood from "./pages/FindFood";
 import Donate from "./pages/Donate";
@@ -54,6 +55,7 @@ function App() {
           </Routes>
         </main>
         <Footer />
+        <LanguageNotification />
       </div>
     </Router>
   );

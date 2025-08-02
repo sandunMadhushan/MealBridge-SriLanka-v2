@@ -2,7 +2,12 @@
 
 **Connecting surplus food to those in need across Sri Lanka**
 
-MealBridge Bolt is a modern, real-time platform designed to reduce food waste and hunger by connecting food donors (individuals, restaurants, businesses) with recipients (NGOs, communities, and individuals) and volunteer delivery agents, through an easy digital system.
+MealBridge Bolt is a modern, real-time platform de## 🚧 Roadmap & Future Plans
+
+- [ ] Mobile app (React Native)
+- [ ] Analytics dashboards for donors
+- [ ] SMS notification support
+- [ ] Optional: More granular donor/recipient feedback and ratingsto reduce food waste and hunger by connecting food donors (individuals, restaurants, businesses) with recipients (NGOs, communities, and individuals) and volunteer delivery agents, through an easy digital system.
 
 ## 🌟 Features
 
@@ -27,10 +32,36 @@ MealBridge Bolt is a modern, real-time platform designed to reduce food waste an
 ### Platform Features
 
 - **Multi-role System**: Separate dashboard and permissions for Donor, Recipient, Volunteer
+- **Multi-language Support**: Full UI translation in English, Sinhala (සිංහල), and Tamil (தமிழ்)
 - **Realtime Data**: All activity updates instantly (Firebase Firestore)
 - **Profile Editing**: Change your info and photo at any time
 - **Mobile-responsive UI**: Works on phone, tablet, and desktop
 - **Secure Auth**: Google + Email/Password sign-in
+
+## 🌐 Multi-Language Support
+
+MealBridge supports three languages to serve Sri Lanka's diverse community:
+
+- **🇬🇧 English** - Default language for international users
+- **🇱🇰 සිංහල (Sinhala)** - Native language support for Sinhala speakers
+- **🇱🇰 தமிழ் (Tamil)** - Native language support for Tamil speakers
+
+### How it Works
+
+- **Google Translate Integration**: Powered by Google Translate for real-time, accurate translations
+- **Smart Language Detection**: Automatically detects user's browser language preference
+- **Persistent Preferences**: Remembers your language choice across sessions
+- **Seamless Experience**: Smooth transitions with loading indicators and notifications
+
+### Features
+
+- Language selector in the header for easy switching
+- Real-time translation with smooth animations
+- Mobile-responsive language picker
+- Accessibility-compliant design
+- Local storage of language preferences
+
+To change language, simply click the language selector (🌐) in the header and choose your preferred language.
 
 ## 💻 Technology Stack
 
