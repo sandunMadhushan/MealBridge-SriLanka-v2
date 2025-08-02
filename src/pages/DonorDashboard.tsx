@@ -223,9 +223,20 @@ export default function DonorDashboard() {
         (d) => d.status === "completed"
       ).length;
       const totalMealsShared = processedDonations.reduce((sum, d) => {
-        // Safely handle quantity - it might be a string or number
-        const quantityStr = String(d.quantity || "1");
-        const servings = parseInt(quantityStr.match(/\d+/)?.[0] || "1");
+        // Safely handle quantity - it might be a string, number, or undefined
+        let servings = 1;
+
+        if (d.quantity !== null && d.quantity !== undefined) {
+          if (typeof d.quantity === "number") {
+            servings = d.quantity;
+          } else {
+            // Convert to string and extract number
+            const quantityStr = String(d.quantity);
+            const match = quantityStr.match(/\d+/);
+            servings = match ? parseInt(match[0]) : 1;
+          }
+        }
+
         return sum + servings;
       }, 0);
 

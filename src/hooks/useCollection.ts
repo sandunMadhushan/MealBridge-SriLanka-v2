@@ -10,10 +10,8 @@ function useCollection<T = any>(collectionName: string) {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from(collectionName)
-        .select('*');
-      
+      const { data, error } = await supabase.from(collectionName).select("*");
+
       if (error) throw error;
       setDocuments(data || []);
       setError(null);
@@ -28,6 +26,30 @@ function useCollection<T = any>(collectionName: string) {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Set up real-time subscription
+  useEffect(() => {
+    const subscription = supabase
+      .channel(`${collectionName}_changes`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: collectionName,
+        },
+        (payload) => {
+          console.log(`${collectionName} changed:`, payload);
+          // Refresh data when changes occur
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [collectionName, fetchData]);
 
   // Expose refresh method to manually re-fetch
   return { documents, loading, error, refresh: fetchData };

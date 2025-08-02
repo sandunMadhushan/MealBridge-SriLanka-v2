@@ -3,6 +3,7 @@ import {
   MapPinIcon,
   ClockIcon,
   CurrencyDollarIcon,
+  PencilIcon,
 } from "@heroicons/react/24/outline";
 import { cn } from "../utils/cn";
 
@@ -10,9 +11,11 @@ interface FoodCardProps {
   listing: FoodListing;
   foodCategories: any[];
   users: any[];
+  currentUserId?: string;
   onClaim?: (id: string) => void;
   onRequest?: (id: string) => void;
   onDelivery?: () => void;
+  onEdit?: (listing: any) => void;
 }
 
 function toDate(val: any): Date | null {
@@ -72,9 +75,11 @@ export default function FoodCard({
   listing,
   foodCategories,
   users,
+  currentUserId,
   onClaim,
   onRequest,
   onDelivery,
+  onEdit,
 }: FoodCardProps) {
   const expiryDate = toDate(listing.expiryDate);
   const now = Date.now();
@@ -93,8 +98,43 @@ export default function FoodCard({
       ? donor.stats.donationsGiven
       : "?";
 
+  // Check if this is the donor's own listing
+  const isDonorOwnListing =
+    currentUserId &&
+    (listing.donorId === currentUserId ||
+      (listing as any).donor_id === currentUserId);
+
+  // Check if listing is unavailable (quantity is 0 or status is not available)
+  const parseQuantity = (qty: any) => {
+    if (!qty) return 0;
+    if (typeof qty === "number") return qty;
+    if (typeof qty === "string") {
+      const match = qty.match(/\d+/);
+      return match ? parseInt(match[0]) : 0;
+    }
+    return 0;
+  };
+
+  const parsedQuantity = parseQuantity(listing.quantity);
+  const isUnavailable = listing.status !== "available" || parsedQuantity <= 0;
+
+  // Debug log for troubleshooting
+  if (isDonorOwnListing) {
+    console.log(`Food Card Debug - ${listing.title}:`, {
+      quantity: listing.quantity,
+      parsedQuantity,
+      status: listing.status,
+      isUnavailable,
+    });
+  }
+
   return (
-    <div className="transition-all duration-300 card hover:shadow-lg group">
+    <div
+      className={cn(
+        "transition-all duration-300 card hover:shadow-lg group",
+        isUnavailable && "opacity-60 bg-gray-100"
+      )}
+    >
       {/* Image */}
       <div className="relative mb-4 overflow-hidden rounded-lg">
         <img
@@ -103,7 +143,10 @@ export default function FoodCard({
             "https://via.placeholder.com/300x200?text=No+Image"
           }
           alt={listing.title}
-          className="object-cover w-full h-48 transition-transform duration-300 group-hover:scale-105"
+          className={cn(
+            "object-cover w-full h-48 transition-transform duration-300 group-hover:scale-105",
+            isUnavailable && "grayscale"
+          )}
         />
         <div className="absolute top-2 left-2">
           <span
@@ -117,11 +160,29 @@ export default function FoodCard({
             {listing.type === "free" ? "Free" : "Half Price"}
           </span>
         </div>
-        {isUrgent && (
+        {isUrgent && !isUnavailable && (
           <div className="absolute top-2 right-2">
             <span className="px-2 py-1 text-xs font-medium text-red-800 bg-red-100 rounded-full animate-pulse">
               Urgent
             </span>
+          </div>
+        )}
+        {isUnavailable && (
+          <div className="absolute top-2 right-2">
+            <span className="px-2 py-1 text-xs font-medium text-gray-800 bg-gray-200 rounded-full">
+              Not Available
+            </span>
+          </div>
+        )}
+        {isDonorOwnListing && (
+          <div className="absolute bottom-2 right-2">
+            <button
+              onClick={() => onEdit?.(listing)}
+              className="p-2 text-white bg-primary-600 rounded-full hover:bg-primary-700 transition-colors"
+              title="Edit listing"
+            >
+              <PencilIcon className="w-4 h-4" />
+            </button>
           </div>
         )}
       </div>
@@ -186,33 +247,51 @@ export default function FoodCard({
         </div>
         {/* Actions */}
         <div className="flex pt-2 space-x-2">
-          {listing.type === "free" ? (
+          {isDonorOwnListing ? (
             <button
-              onClick={() => onClaim?.(listing.id)}
-              className="flex-1 text-sm btn-primary"
-              disabled={listing.status !== "available"}
+              onClick={() => onEdit?.(listing)}
+              className="flex-1 text-sm btn-outline"
             >
-              {listing.status === "available" ? "Claim Food" : "Not Available"}
+              Edit Listing
             </button>
           ) : (
-            <button
-              onClick={() => onRequest?.(listing.id)}
-              className="flex-1 text-sm btn-secondary"
-              disabled={listing.status !== "available"}
-            >
-              {listing.status === "available"
-                ? "Request Food"
-                : "Not Available"}
-            </button>
-          )}
-          {listing.deliveryRequested && (
-            <button 
-              onClick={onDelivery}
-              className="px-3 text-sm btn-outline"
-              disabled={listing.status !== "available"}
-            >
-              🚚 Delivery
-            </button>
+            <>
+              {listing.type === "free" ? (
+                <button
+                  onClick={() => onClaim?.(listing.id)}
+                  className={cn(
+                    "flex-1 text-sm transition-colors",
+                    isUnavailable
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "btn-primary"
+                  )}
+                  disabled={isUnavailable}
+                >
+                  {isUnavailable ? "Not Available" : "Claim Food"}
+                </button>
+              ) : (
+                <button
+                  onClick={() => onRequest?.(listing.id)}
+                  className={cn(
+                    "flex-1 text-sm transition-colors",
+                    isUnavailable
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "btn-secondary"
+                  )}
+                  disabled={isUnavailable}
+                >
+                  {isUnavailable ? "Not Available" : "Request Food"}
+                </button>
+              )}
+              {listing.deliveryRequested && !isUnavailable && (
+                <button
+                  onClick={onDelivery}
+                  className="px-3 text-sm btn-outline"
+                >
+                  🚚 Delivery
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

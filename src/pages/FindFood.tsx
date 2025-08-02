@@ -10,6 +10,7 @@ import useCollection from "../hooks/useCollection";
 import ClaimFoodModal from "../components/ClaimFoodModal";
 import RequestFoodModal from "../components/RequestFoodModal";
 import DeliveryModal from "../components/DeliveryModal";
+import EditFoodModal from "../components/EditFoodModal";
 import { useAuth } from "../context/AuthContext";
 import { TABLES } from "../supabase";
 
@@ -29,13 +30,17 @@ export default function FindFood() {
   const [claimModalOpen, setClaimModalOpen] = useState(false);
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedListing, setSelectedListing] = useState<any>(null);
 
   const { user } = useAuth();
 
   // LIVE DATA
-  const { documents: foodListings = [], loading: listingsLoading } =
-    useCollection(TABLES.FOOD_LISTINGS);
+  const {
+    documents: foodListings = [],
+    loading: listingsLoading,
+    refresh: refreshListings,
+  } = useCollection(TABLES.FOOD_LISTINGS);
   const { documents: foodCategories = [], loading: categoriesLoading } =
     useCollection(TABLES.FOOD_CATEGORIES);
   const { documents: users = [], loading: usersLoading } = useCollection(
@@ -242,6 +247,29 @@ export default function FindFood() {
       });
     }
 
+    // Sort unavailable items (quantity = 0 or status not available) to the end
+    filtered.sort((a: any, b: any) => {
+      // Parse quantity from string (e.g., "5 servings" -> 5)
+      const parseQuantity = (qty: any) => {
+        if (!qty) return 0;
+        if (typeof qty === "number") return qty;
+        if (typeof qty === "string") {
+          const match = qty.match(/\d+/);
+          return match ? parseInt(match[0]) : 0;
+        }
+        return 0;
+      };
+
+      const aQuantity = parseQuantity(a.quantity);
+      const bQuantity = parseQuantity(b.quantity);
+      const aUnavailable = aQuantity <= 0 || a.status !== "available";
+      const bUnavailable = bQuantity <= 0 || b.status !== "available";
+
+      if (aUnavailable && !bUnavailable) return 1;
+      if (!aUnavailable && bUnavailable) return -1;
+      return 0;
+    });
+
     return filtered;
   }, [
     foodListings,
@@ -277,6 +305,11 @@ export default function FindFood() {
     }
     setSelectedListing(listing);
     setDeliveryModalOpen(true);
+  };
+
+  const handleEdit = (listing: any) => {
+    setSelectedListing(listing);
+    setEditModalOpen(true);
   };
 
   return (
@@ -457,9 +490,11 @@ export default function FindFood() {
                       foodCategories={foodCategories}
                       users={users}
                       listing={normalizedListing}
+                      currentUserId={user?.id}
                       onClaim={() => handleClaim(listing)}
                       onRequest={() => handleRequest(listing)}
                       onDelivery={() => handleDelivery(listing)}
+                      onEdit={() => handleEdit(listing)}
                     />
                   );
                 })}
@@ -519,6 +554,18 @@ export default function FindFood() {
               setSelectedListing(null);
             }}
             listing={selectedListing}
+          />
+          <EditFoodModal
+            isOpen={editModalOpen}
+            onClose={() => {
+              setEditModalOpen(false);
+              setSelectedListing(null);
+            }}
+            listing={selectedListing}
+            onListingUpdated={() => {
+              // Manually refresh the listings to ensure immediate update
+              refreshListings();
+            }}
           />
         </>
       )}
