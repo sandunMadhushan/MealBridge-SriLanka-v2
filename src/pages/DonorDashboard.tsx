@@ -101,7 +101,7 @@ export default function DonorDashboard() {
         status: data.status || "available",
         title: data.title,
         quantity: data.quantity,
-        images: data.images,
+        images: data.image_urls || [], // Fix: Map image_urls to images
         createdAt: data.created_at,
         pickupLocation: data.pickup_location,
         type: data.type,
