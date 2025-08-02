@@ -8,6 +8,7 @@ import {
   TrophyIcon,
   HeartIcon,
   UsersIcon,
+  DocumentCheckIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../context/AuthContext";
 import { supabase, TABLES } from "../supabase";
@@ -38,6 +39,7 @@ export default function DonorDashboard() {
   }
 
   const [donations, setDonations] = useState<Donation[]>([]);
+  const [claims, setClaims] = useState<any[]>([]);
   const [stats, setStats] = useState<DonorStats>({
     totalDonations: 0,
     activeDonations: 0,
@@ -108,6 +110,41 @@ export default function DonorDashboard() {
       }));
 
       setDonations(processedDonations);
+
+      // Fetch claims on donor's listings
+      const { data: claimsData, error: claimsError } = await supabase
+        .from(TABLES.FOOD_CLAIMS)
+        .select(
+          `
+          *,
+          food_listings!inner(
+            id,
+            title,
+            donor_id
+          )
+        `
+        )
+        .eq("food_listings.donor_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (claimsError) throw claimsError;
+
+      const processedClaims = (claimsData || []).map((claim) => ({
+        id: claim.id,
+        listingTitle: claim.food_listings?.title || "Unknown Food",
+        claimantName: claim.claimant_name || "Unknown User",
+        claimantEmail: claim.claimant_email || "",
+        quantityRequested: claim.quantity_requested || 1,
+        status: claim.status || "pending",
+        pickupDateTime: claim.pickup_date_time,
+        contactMethod: claim.contact_method || "email",
+        phone: claim.phone || "",
+        email: claim.email || "",
+        notes: claim.notes || "",
+        createdAt: claim.created_at,
+      }));
+
+      setClaims(processedClaims);
 
       // Calculate stats
       const totalDonations = processedDonations.length;
@@ -190,6 +227,7 @@ export default function DonorDashboard() {
   const tabs = [
     { id: "overview", name: "Overview", icon: TrophyIcon },
     { id: "active", name: "Active Donations", icon: ClockIcon },
+    { id: "claims", name: "Food Claims", icon: UsersIcon },
     { id: "history", name: "Donation History", icon: GiftIcon },
     { id: "impact", name: "My Impact", icon: HeartIcon },
   ];
