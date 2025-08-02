@@ -6,10 +6,14 @@ import {
   MapPinIcon,
   PlusIcon,
   PencilSquareIcon,
+  PencilIcon,
+  EyeIcon,
 } from "@heroicons/react/24/outline";
 import StoryCard from "../components/StoryCard";
 import CreateEventModal from "../components/CreateEventModal";
 import CreateStoryModal from "../components/CreateStoryModal";
+import EditEventModal from "../components/EditEventModal";
+import AttendeesModal from "../components/AttendeesModal";
 import { cn } from "../utils/cn";
 
 // Supabase
@@ -43,6 +47,11 @@ export default function Community() {
   const [createStoryModalOpen, setCreateStoryModalOpen] = useState(false);
   const [editingStory, setEditingStory] = useState<any>(null);
   const [joinLoading, setJoinLoading] = useState<string | null>(null);
+  const [editEventModalOpen, setEditEventModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [attendeesModalOpen, setAttendeesModalOpen] = useState(false);
+  const [selectedEventForAttendees, setSelectedEventForAttendees] =
+    useState<any>(null);
 
   const tabs = [
     { id: "stories", name: "Community Stories", icon: UserGroupIcon },
@@ -104,6 +113,26 @@ export default function Community() {
     if (val.toDate) return val.toDate();
     return new Date(val);
   }
+
+  const handleEditEvent = (event: any) => {
+    setEditingEvent(event);
+    setEditEventModalOpen(true);
+  };
+
+  const handleCloseEditEventModal = () => {
+    setEditEventModalOpen(false);
+    setEditingEvent(null);
+  };
+
+  const handleViewAttendees = (event: any) => {
+    setSelectedEventForAttendees(event);
+    setAttendeesModalOpen(true);
+  };
+
+  const handleCloseAttendeesModal = () => {
+    setAttendeesModalOpen(false);
+    setSelectedEventForAttendees(null);
+  };
 
   const handleEditStory = (story: any) => {
     setEditingStory(story);
@@ -581,22 +610,51 @@ export default function Community() {
                           </div>
                         </div>
 
-                        <button
-                          className={cn(
-                            "w-full font-medium py-2 px-4 rounded-lg transition-colors duration-200",
-                            isJoined
-                              ? "bg-red-100 text-red-700 hover:bg-red-200"
-                              : "btn-primary"
-                          )}
-                          onClick={() => handleJoinEvent(event.id)}
-                          disabled={isLoading}
-                        >
-                          {isLoading
-                            ? "Updating..."
-                            : isJoined
-                            ? "Leave Event"
-                            : "Join Event"}
-                        </button>
+                        {/* Check if current user is the event organizer */}
+                        {user &&
+                        (event.organizer_id === user.id ||
+                          event.created_by_id === user.id) ? (
+                          <div className="space-y-2">
+                            <div className="flex space-x-2">
+                              <button
+                                className="flex-1 btn-secondary flex items-center justify-center space-x-2"
+                                onClick={() => handleEditEvent(event)}
+                              >
+                                <PencilSquareIcon className="w-4 h-4" />
+                                <span>Edit Event</span>
+                              </button>
+                              <button
+                                className="flex-1 btn-outline flex items-center justify-center space-x-2"
+                                onClick={() => handleViewAttendees(event)}
+                              >
+                                <UserGroupIcon className="w-4 h-4" />
+                                <span>Attendees</span>
+                              </button>
+                            </div>
+                            <p className="text-xs text-gray-500 text-center">
+                              You organized this event
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <button
+                              className={cn(
+                                "w-full font-medium py-2 px-4 rounded-lg transition-colors duration-200",
+                                isJoined
+                                  ? "bg-red-100 text-red-700 hover:bg-red-200"
+                                  : "btn-primary"
+                              )}
+                              onClick={() => handleJoinEvent(event.id)}
+                              disabled={isLoading}
+                            >
+                              {isLoading
+                                ? "Updating..."
+                                : isJoined
+                                ? "Leave Event"
+                                : "Join Event"}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -623,6 +681,21 @@ export default function Community() {
         isOpen={createEventModalOpen}
         onClose={() => setCreateEventModalOpen(false)}
         onEventCreated={refreshEvents}
+      />
+
+      {/* Edit Event Modal */}
+      <EditEventModal
+        isOpen={editEventModalOpen}
+        onClose={handleCloseEditEventModal}
+        onEventUpdated={refreshEvents}
+        event={editingEvent}
+      />
+
+      {/* Attendees Modal */}
+      <AttendeesModal
+        isOpen={attendeesModalOpen}
+        onClose={handleCloseAttendeesModal}
+        event={selectedEventForAttendees}
       />
 
       {/* Create Story Modal */}
