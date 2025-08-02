@@ -51,20 +51,6 @@ export class GoogleTranslateService {
         try {
           console.log("Initializing Google Translate Element...");
 
-          const translateElement = new (
-            window as any
-          ).google.translate.TranslateElement(
-            {
-              pageLanguage: "en",
-              includedLanguages: "en,si,ta",
-              layout: (window as any).google.translate.TranslateElement
-                .InlineLayout.SIMPLE,
-              autoDisplay: false,
-              multilanguagePage: true,
-            },
-            "google-translate-element"
-          );
-
           this.isInitialized = true;
           console.log("Google Translate initialized successfully");
 
