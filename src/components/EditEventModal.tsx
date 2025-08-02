@@ -320,7 +320,6 @@ export default function EditEventModal({
                 className="input-field"
                 title="Select event date"
                 required
-                required
               />
             </div>
             <div>
@@ -431,7 +430,7 @@ export default function EditEventModal({
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-lg hover:bg-primary-700 disabled:opacity-50"
+              className="px-4 py-2 text-sm font-medium text-white border border-transparent rounded-lg bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
             >
               {loading ? "Updating..." : "Update Event"}
             </button>
