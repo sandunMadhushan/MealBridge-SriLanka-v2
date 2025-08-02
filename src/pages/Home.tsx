@@ -15,6 +15,7 @@ import RequestFoodModal from "../components/RequestFoodModal";
 import DeliveryModal from "../components/DeliveryModal";
 import { useAuth } from "../context/AuthContext";
 import { supabase, TABLES } from "../supabase";
+import { AuthTokenRedirect } from "../components/AuthTokenRedirect";
 
 export default function Home() {
   const { user } = useAuth();
@@ -104,6 +105,7 @@ export default function Home() {
   };
   return (
     <div className="min-h-screen">
+      <AuthTokenRedirect />
       {/* Hero Section */}
       <section className="py-20 text-white hero-gradient">
         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">

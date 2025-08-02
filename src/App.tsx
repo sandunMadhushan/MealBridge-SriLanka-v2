@@ -11,6 +11,7 @@ import DonorDashboard from "./pages/DonorDashboard";
 import RecipientDashboard from "./pages/RecipientDashboard";
 import VolunteerDashboard from "./pages/VolunteerDashboard";
 import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Profile from "./pages/Profile";
 import HelpCenter from "./pages/HelpCenter";
 import FoodSafety from "./pages/FoodSafety";
@@ -42,6 +43,7 @@ function App() {
               element={<VolunteerDashboard />}
             />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/help" element={<HelpCenter />} />
             <Route path="/safety" element={<FoodSafety />} />

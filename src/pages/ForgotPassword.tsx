@@ -15,13 +15,19 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      // Use the correct redirect URL based on environment
+      const redirectTo =
+        window.location.hostname === "localhost"
+          ? `${window.location.origin}/reset-password`
+          : "https://mealbridgesrilankav2.netlify.app/reset-password";
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo,
+      });
       if (error) throw error;
       setMessage("If an account exists, a password reset email has been sent.");
     } catch (err: any) {
-      setError(
-        "Something went wrong. Please try again."
-      );
+      setError("Something went wrong. Please try again.");
     }
     setLoading(false);
   };
