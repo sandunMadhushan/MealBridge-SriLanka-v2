@@ -6,8 +6,8 @@ import {
   MapPinIcon,
   PlusIcon,
   PencilSquareIcon,
-  PencilIcon,
-  EyeIcon,
+  // PencilIcon,
+  // EyeIcon,
 } from "@heroicons/react/24/outline";
 import StoryCard from "../components/StoryCard";
 import CreateEventModal from "../components/CreateEventModal";
@@ -617,21 +617,21 @@ export default function Community() {
                           <div className="space-y-2">
                             <div className="flex space-x-2">
                               <button
-                                className="flex-1 btn-secondary flex items-center justify-center space-x-2"
+                                className="flex items-center justify-center flex-1 space-x-2 btn-secondary"
                                 onClick={() => handleEditEvent(event)}
                               >
                                 <PencilSquareIcon className="w-4 h-4" />
                                 <span>Edit Event</span>
                               </button>
                               <button
-                                className="flex-1 btn-outline flex items-center justify-center space-x-2"
+                                className="flex items-center justify-center flex-1 space-x-2 btn-outline"
                                 onClick={() => handleViewAttendees(event)}
                               >
                                 <UserGroupIcon className="w-4 h-4" />
                                 <span>Attendees</span>
                               </button>
                             </div>
-                            <p className="text-xs text-gray-500 text-center">
+                            <p className="text-xs text-center text-gray-500">
                               You organized this event
                             </p>
                           </div>
