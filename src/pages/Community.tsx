@@ -309,7 +309,7 @@ export default function Community() {
                     story={story}
                     onLike={(id) => console.log("Like story:", id)}
                     onEdit={handleEditStory}
-                    currentUserId={user?.uid}
+                    currentUserId={user?.id}
                   />
                 ))}
               </div>
@@ -495,7 +495,7 @@ export default function Community() {
                   const eventDate = event.date?.toDate
                     ? event.date.toDate()
                     : new Date(event.date);
-                  const isJoined = user && event.attendees?.includes(user.uid);
+                  const isJoined = user && event.attendees?.includes(user.id);
                   const isLoading = joinLoading === event.id;
 
                   return (
@@ -573,7 +573,7 @@ export default function Community() {
                   );
                 })}
                 {upcomingEvents.length === 0 && (
-                  <div className="col-span-full py-12 text-center text-gray-500">
+                  <div className="py-12 text-center text-gray-500 col-span-full">
                     <CalendarIcon className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                     <h3 className="mb-2 text-lg font-medium text-gray-900">
                       No upcoming events
