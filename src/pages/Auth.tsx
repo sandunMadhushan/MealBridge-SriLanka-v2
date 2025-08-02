@@ -107,11 +107,11 @@ export default function Auth() {
         id: pendingGoogleUser.uid,
         name: pendingGoogleUser.name,
         email: pendingGoogleUser.email,
-        role: selectedRole,
+        user_type: selectedRole,
         location: formData.location,
         phone: formData.phone,
         verified: true,
-        joined_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
       });
 
       if (error) throw error;
@@ -144,26 +144,26 @@ export default function Auth() {
 
         if (error) throw error;
 
-        // Fetch the user profile to get the exact role
+        // Fetch the user profile to get the exact user_type
         const { data: userProfile, error: profileError } = await supabase
           .from("users")
-          .select("role")
+          .select("user_type")
           .eq("id", data.user.id)
           .single();
 
         if (profileError) throw profileError;
 
         if (userProfile) {
-          const role = userProfile.role;
+          const userType = userProfile.user_type;
           setLoading(false);
-          if (role === "donor") {
+          if (userType === "donor") {
             navigate("/dashboard/donor");
-          } else if (role === "recipient") {
+          } else if (userType === "recipient") {
             navigate("/dashboard/recipient");
-          } else if (role === "volunteer") {
+          } else if (userType === "volunteer") {
             navigate("/dashboard/volunteer");
           } else {
-            setError("Invalid role. Please contact support.");
+            setError("Invalid user type. Please contact support.");
           }
         } else {
           setLoading(false);
@@ -195,11 +195,11 @@ export default function Auth() {
             id: data.user.id,
             name: formData.name,
             email: formData.email,
-            role: selectedRole,
+            user_type: selectedRole,
             location: formData.location,
             phone: formData.phone,
             verified: false,
-            joined_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
           });
 
           if (insertError) throw insertError;
