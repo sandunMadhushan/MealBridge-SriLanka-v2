@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { auth } from "../firebase";
-import { sendPasswordResetEmail } from "firebase/auth";
+import { supabase } from "../supabase";
 import { Link } from "react-router-dom";
 
 export default function ForgotPassword() {
@@ -16,13 +15,12 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      await sendPasswordResetEmail(auth, email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw error;
       setMessage("If an account exists, a password reset email has been sent.");
     } catch (err: any) {
       setError(
-        err.message === "Firebase: Error (auth/user-not-found)."
-          ? "No account found with that email."
-          : "Something went wrong. Please try again."
+        "Something went wrong. Please try again."
       );
     }
     setLoading(false);

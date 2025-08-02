@@ -6,9 +6,7 @@ import {
   ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 import { cn } from "../utils/cn";
-import { db, storage } from "../firebase";
-import { collection, addDoc, Timestamp, doc, getDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { supabase } from "../supabase";
 import { useAuth } from "../context/AuthContext";
 
 interface FoodCategory {
@@ -74,22 +72,16 @@ export default function Donate() {
 
   const { user } = useAuth();
 
-  // Load foodCategories from Firestore
+  // Load foodCategories from Supabase
   useEffect(() => {
     async function getCategories() {
       try {
-        const { getDocs } = await import("firebase/firestore");
-        const qsnap = await getDocs(collection(db, "foodCategories"));
-        const docs = qsnap.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            name: data.name ?? "",
-            icon: data.icon ?? "",
-            color: data.color ?? "",
-          } as FoodCategory;
-        });
-        setFoodCategories(docs);
+        const { data, error } = await supabase
+          .from('food_categories')
+          .select('*');
+        
+        if (error) throw error;
+        setFoodCategories(data || []);
       } catch (err) {
         setFoodCategories([]);
       }
@@ -256,10 +248,20 @@ export default function Donate() {
     try {
       let imageUrls: string[] = [];
       for (let img of form.images) {
-        const imgRef = ref(storage, `foodImages/${Date.now()}_${img.name}`);
-        await uploadBytes(imgRef, img);
-        const url = await getDownloadURL(imgRef);
-        imageUrls.push(url);
+        const fileExt = img.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('food-images')
+          .upload(fileName, img);
+        
+        if (uploadError) throw uploadError;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('food-images')
+          .getPublicUrl(fileName);
+        
+        imageUrls.push(publicUrl);
       }
 
       let expiry = null;
@@ -272,28 +274,33 @@ export default function Donate() {
       let donorInfo = undefined;
       if (user) {
         try {
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (userDoc.exists()) {
-            const udata = userDoc.data();
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          
+          if (userError) throw userError;
+          if (userData) {
             donorInfo = {
-              id: user.uid,
+              id: user.id,
               email: user.email,
-              name: udata.name || user.displayName || user.email || "Anonymous",
-              stats: udata.stats || { donationsGiven: 0 },
+              name: userData.name || user.user_metadata?.full_name || user.email || "Anonymous",
+              stats: userData.stats || { donationsGiven: 0 },
             };
           } else {
             donorInfo = {
-              id: user.uid,
+              id: user.id,
               email: user.email,
-              name: user.displayName || user.email || "Anonymous",
+              name: user.user_metadata?.full_name || user.email || "Anonymous",
               stats: { donationsGiven: 0 },
             };
           }
         } catch {
           donorInfo = {
-            id: user.uid,
+            id: user.id,
             email: user.email,
-            name: user.displayName || user.email || "Anonymous",
+            name: user.user_metadata?.full_name || user.email || "Anonymous",
             stats: { donationsGiven: 0 },
           };
         }
@@ -306,29 +313,32 @@ export default function Donate() {
         };
       }
 
-      const foodDoc = {
-        title: form.title,
-        description: form.description,
-        category: categoryObj || form.category,
-        quantity: form.quantity,
-        expiryDate: expiry ? Timestamp.fromDate(expiry) : null,
-        pickupLocation: {
-          address: form.address,
-          city: form.city,
-          district: form.district,
-        },
-        images: imageUrls,
-        type: form.type,
-        price: form.type === "half-price" ? parseFloat(form.price) : 0,
-        status: "available",
-        createdAt: Timestamp.now(),
-        deliveryRequested: form.deliveryAvailable,
-        safetyChecklist: form.safetyChecklist,
-        allergenInfo: form.allergenInfo,
-        donor: donorInfo,
-      };
+      const { error } = await supabase
+        .from('food_listings')
+        .insert({
+          title: form.title,
+          description: form.description,
+          category: categoryObj || form.category,
+          quantity: form.quantity,
+          expiry_date: expiry?.toISOString(),
+          pickup_location: {
+            address: form.address,
+            city: form.city,
+            district: form.district,
+          },
+          images: imageUrls,
+          type: form.type,
+          price: form.type === "half-price" ? parseFloat(form.price) : 0,
+          status: "available",
+          created_at: new Date().toISOString(),
+          delivery_requested: form.deliveryAvailable,
+          safety_checklist: form.safetyChecklist,
+          allergen_info: form.allergenInfo,
+          donor: donorInfo,
+        });
+      
+      if (error) throw error;
 
-      await addDoc(collection(db, "foodListings"), foodDoc);
 
       setSubmitSuccess("Your food listing has been submitted!");
       setCurrentStep(1);

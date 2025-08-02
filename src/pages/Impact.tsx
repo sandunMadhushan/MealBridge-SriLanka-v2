@@ -8,8 +8,7 @@ import {
 } from "@heroicons/react/24/outline";
 import ImpactCard from "../components/ImpactCard";
 import { useEffect, useState } from "react";
-import { db } from "../firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { supabase } from "../supabase";
 // NEW: Import from Recharts
 import {
   ResponsiveContainer,
@@ -36,12 +35,22 @@ export default function Impact() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const statsDoc = await getDoc(doc(db, "stats", "impact"));
-        if (statsDoc.exists()) {
-          const data = statsDoc.data();
+        const { data, error } = await supabase
+          .from('stats')
+          .select('*')
+          .eq('type', 'impact')
+          .single();
+        
+        if (error) throw error;
+        if (data) {
           setImpactStats((prev) => ({
             ...prev,
-            ...data,
+            co2Saved: data.co2_saved || 0,
+            peopleReached: data.people_reached || 0,
+            totalBusinessesJoined: data.total_businesses_joined || 0,
+            totalFoodWasteSaved: data.total_food_waste_saved || 0,
+            totalMealsShared: data.total_meals_shared || 0,
+            totalUsersActive: data.total_users_active || 0,
           }));
         }
       } catch (e) {

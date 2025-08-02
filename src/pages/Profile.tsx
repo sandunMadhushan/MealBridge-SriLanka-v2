@@ -1,9 +1,6 @@
 import { useEffect, useState, ChangeEvent } from "react";
 import { useAuth } from "../context/AuthContext";
-import { db, auth, storage } from "../firebase";
-import { getDoc, doc, updateDoc } from "firebase/firestore";
-import { updateProfile } from "firebase/auth";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { supabase } from "../supabase";
 import { cn } from "../utils/cn";
 import { CameraIcon } from "@heroicons/react/24/outline";
 
@@ -29,16 +26,21 @@ export default function Profile() {
       if (!user) return;
       setLoading(true);
       try {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists()) {
-          const data = userDoc.data();
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        if (error) throw error;
+        if (data) {
           setProfile({
             name: data.name || "",
             email: data.email || user.email || "",
             location: data.location || "",
             phone: data.phone || "",
             role: data.role || "",
-            photoURL: user.photoURL || "",
+            photoURL: user.user_metadata?.avatar_url || "",
           });
         } else {
           setError("Profile not found.");
@@ -73,23 +75,43 @@ export default function Profile() {
     try {
       let photoURLToSave = profile.photoURL;
       if (newPhotoFile) {
-        const photoRef = ref(
-          storage,
-          `profilePhotos/${user.uid}_${Date.now()}`
-        );
-        await uploadBytes(photoRef, newPhotoFile);
-        photoURLToSave = await getDownloadURL(photoRef);
+        const fileExt = newPhotoFile.name.split('.').pop();
+        const fileName = `${user.id}_${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('profile-photos')
+          .upload(fileName, newPhotoFile);
+        
+        if (uploadError) throw uploadError;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('profile-photos')
+          .getPublicUrl(fileName);
+        
+        photoURLToSave = publicUrl;
       }
-      await updateDoc(doc(db, "users", user.uid), {
-        name: profile.name,
-        location: profile.location,
-        phone: profile.phone,
-        photoURL: photoURLToSave,
+      
+      const { error } = await supabase
+        .from('users')
+        .update({
+          name: profile.name,
+          location: profile.location,
+          phone: profile.phone,
+          photo_url: photoURLToSave,
+        })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      // Update auth user metadata
+      const { error: authError } = await supabase.auth.updateUser({
+        data: {
+          full_name: profile.name,
+          avatar_url: photoURLToSave,
+        }
       });
-      await updateProfile(auth.currentUser!, {
-        displayName: profile.name,
-        photoURL: photoURLToSave,
-      });
+      
+      if (authError) throw authError;
       setProfile((p) => ({ ...p, photoURL: photoURLToSave }));
       setNewPhotoFile(null);
       setSuccess("Profile updated!");

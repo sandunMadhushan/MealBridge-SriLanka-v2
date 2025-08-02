@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { supabase } from "../supabase";
 
 function useDocument<T = any>(collectionName: string, docId: string) {
   const [document, setDocument] = useState<T | null>(null);
@@ -11,11 +10,17 @@ function useDocument<T = any>(collectionName: string, docId: string) {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const docRef = doc(db, collectionName, docId);
-        const docSnap = await getDoc(docRef);
-        setDocument(docSnap.exists() ? (docSnap.data() as T) : null);
+        const { data, error } = await supabase
+          .from(collectionName)
+          .select('*')
+          .eq('id', docId)
+          .single();
+        
+        if (error) throw error;
+        setDocument(data);
       } catch (err: any) {
         setError(err.message);
+        setDocument(null);
       }
       setLoading(false);
     };

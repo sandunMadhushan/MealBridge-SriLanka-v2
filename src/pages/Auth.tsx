@@ -2,15 +2,7 @@ import React, { useState } from "react";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { cn } from "../utils/cn";
 import { useNavigate, Link } from "react-router-dom";
-import { auth, db } from "../firebase";
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  updateProfile,
-  GoogleAuthProvider,
-  signInWithPopup,
-} from "firebase/auth";
-import { setDoc, doc, serverTimestamp, getDoc } from "firebase/firestore";
+import { supabase } from "../supabase";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -86,26 +78,30 @@ export default function Auth() {
     setSuccess(null);
     setLoading(true);
     try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+      });
 
-      const user = result.user;
+      if (error) throw error;
 
-      // Check if user document exists
-      const userDocRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userDocRef);
+      // Check if user profile exists
+      const { data: userProfile, error: profileError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', data.user?.id)
+        .single();
 
-      if (!userDoc.exists()) {
+      if (profileError && profileError.code === 'PGRST116') {
         // Prompt (modal) for new Google user to complete sign up
         setPendingGoogleUser({
-          uid: user.uid,
-          name: user.displayName ?? "",
-          email: user.email ?? "",
+          uid: data.user?.id ?? "",
+          name: data.user?.user_metadata?.full_name ?? "",
+          email: data.user?.email ?? "",
         });
         setLoading(false);
       } else {
         // Existing Google user, route by role
-        const role = userDoc.data()?.role;
+        const role = userProfile?.role;
         setLoading(false);
         if (role === "donor") navigate("/dashboard/donor");
         else if (role === "recipient") navigate("/dashboard/recipient");
@@ -128,15 +124,20 @@ export default function Auth() {
     setError(null);
     setLoading(true);
     try {
-      await setDoc(doc(db, "users", pendingGoogleUser.uid), {
-        name: pendingGoogleUser.name,
-        email: pendingGoogleUser.email,
-        role: selectedRole,
-        location: formData.location,
-        phone: formData.phone,
-        verified: true,
-        joinedAt: serverTimestamp(),
-      });
+      const { error } = await supabase
+        .from('users')
+        .insert({
+          id: pendingGoogleUser.uid,
+          name: pendingGoogleUser.name,
+          email: pendingGoogleUser.email,
+          role: selectedRole,
+          location: formData.location,
+          phone: formData.phone,
+          verified: true,
+          joined_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
       setPendingGoogleUser(null);
       setLoading(false);
       if (selectedRole === "donor") navigate("/dashboard/donor");
@@ -158,18 +159,25 @@ export default function Auth() {
 
     try {
       if (isLogin) {
-        // Firebase Sign In
-        const userCredential = await signInWithEmailAndPassword(
-          auth,
-          formData.email,
-          formData.password
-        );
+        // Supabase Sign In
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
 
-        // Fetch the user doc to get the exact role
-        const userDocRef = doc(db, "users", userCredential.user.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          const role = userDoc.data().role;
+        if (error) throw error;
+
+        // Fetch the user profile to get the exact role
+        const { data: userProfile, error: profileError } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profileError) throw profileError;
+
+        if (userProfile) {
+          const role = userProfile.role;
           setLoading(false);
           if (role === "donor") {
             navigate("/dashboard/donor");
@@ -191,25 +199,36 @@ export default function Auth() {
           setLoading(false);
           return;
         }
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          formData.email,
-          formData.password
-        );
-        // Update display name
-        await updateProfile(userCredential.user, {
-          displayName: formData.name,
-        });
-        // Store extra user info in Firestore
-        await setDoc(doc(db, "users", userCredential.user.uid), {
-          name: formData.name,
+        
+        const { data, error } = await supabase.auth.signUp({
           email: formData.email,
-          role: selectedRole,
-          location: formData.location,
-          phone: formData.phone,
-          verified: false,
-          joinedAt: serverTimestamp(),
+          password: formData.password,
+          options: {
+            data: {
+              full_name: formData.name,
+            }
+          }
         });
+
+        if (error) throw error;
+
+        // Store extra user info in users table
+        if (data.user) {
+          const { error: insertError } = await supabase
+            .from('users')
+            .insert({
+              id: data.user.id,
+              name: formData.name,
+              email: formData.email,
+              role: selectedRole,
+              location: formData.location,
+              phone: formData.phone,
+              verified: false,
+              joined_at: new Date().toISOString(),
+            });
+
+          if (insertError) throw insertError;
+        }
         setSuccess("Registration successful! You can now sign in.");
         setLoading(false);
         setIsLogin(true);

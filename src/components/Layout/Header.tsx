@@ -7,10 +7,8 @@ import {
 } from "@heroicons/react/24/outline";
 import { cn } from "../../utils/cn";
 import { useAuth } from "../../context/AuthContext";
-import { signOut } from "firebase/auth";
-import { auth, db } from "../../firebase";
+import { supabase } from "../../supabase";
 import NotificationCenter from "../NotificationCenter";
-import { doc, getDoc } from "firebase/firestore";
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -67,9 +65,15 @@ export default function Header() {
     if (!user) return null;
     if (userRole) return userRole;
     try {
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (userDoc.exists()) {
-        const role = userDoc.data().role;
+      const { data, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      
+      if (error) throw error;
+      if (data) {
+        const role = data.role;
         setUserRole(role);
         return role;
       }
@@ -87,7 +91,7 @@ export default function Header() {
   };
 
   const handleSignOut = async () => {
-    await signOut(auth);
+    await supabase.auth.signOut();
     setProfileMenuOpen(false);
     setUserRole(null);
     navigate("/", { replace: true });
@@ -145,17 +149,17 @@ export default function Header() {
                   aria-label="Open user menu"
                   type="button"
                 >
-                  {user.photoURL ? (
+                  {user.user_metadata?.avatar_url ? (
                     <img
-                      src={user.photoURL}
-                      alt={user.displayName || "User"}
+                      src={user.user_metadata.avatar_url}
+                      alt={user.user_metadata?.full_name || "User"}
                       className="object-cover w-6 h-6 rounded-full"
                     />
                   ) : (
                     <UserCircleIcon className="w-6 h-6 text-primary-600" />
                   )}
                   <span className="font-medium text-gray-700">
-                    {user.displayName || user.email || "User"}
+                    {user.user_metadata?.full_name || user.email || "User"}
                   </span>
                 </button>
                 {profileMenuOpen && (
@@ -257,16 +261,16 @@ export default function Header() {
                         if (!userRole) fetchUserRole();
                       }}
                     >
-                      {user.photoURL ? (
+                      {user.user_metadata?.avatar_url ? (
                         <img
-                          src={user.photoURL}
-                          alt={user.displayName || "User"}
+                          src={user.user_metadata.avatar_url}
+                          alt={user.user_metadata?.full_name || "User"}
                           className="inline-block object-cover w-5 h-5 rounded-full"
                         />
                       ) : (
                         <UserCircleIcon className="inline w-5 h-5 text-primary-600" />
                       )}
-                      <span>{user.displayName || user.email || "User"}</span>
+                      <span>{user.user_metadata?.full_name || user.email || "User"}</span>
                     </button>
                     {profileMenuOpen && (
                       <div

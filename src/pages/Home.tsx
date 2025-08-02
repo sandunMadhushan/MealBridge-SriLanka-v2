@@ -14,8 +14,7 @@ import ClaimFoodModal from "../components/ClaimFoodModal";
 import RequestFoodModal from "../components/RequestFoodModal";
 import DeliveryModal from "../components/DeliveryModal";
 import { useAuth } from "../context/AuthContext";
-import { db } from "../firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { supabase } from "../supabase";
 
 export default function Home() {
   const { user } = useAuth();
@@ -28,15 +27,15 @@ export default function Home() {
 
   // Load Firestore data for food listings, categories, users, stories (collections)
   const { documents: foodListings = [], loading: listingsLoading } =
-    useCollection("foodListings");
+    useCollection("food_listings");
   const { documents: foodCategories = [], loading: categoriesLoading } =
-    useCollection("foodCategories");
+    useCollection("food_categories");
   const { documents: users = [], loading: usersLoading } =
     useCollection("users");
   const { documents: communityStories = [], loading: storiesLoading } =
-    useCollection("communityStories");
+    useCollection("community_stories");
 
-  // --- Fetch impact stats from Firestore document stats/impact ---
+  // --- Fetch impact stats from Supabase stats table ---
   const [impactStats, setImpactStats] = useState({
     totalMealsShared: 0,
     totalUsersActive: 0,
@@ -49,14 +48,19 @@ export default function Home() {
     async function fetchImpactStats() {
       setImpactLoading(true);
       try {
-        const snap = await getDoc(doc(db, "stats", "impact"));
-        if (snap.exists()) {
-          const data = snap.data();
+        const { data, error } = await supabase
+          .from('stats')
+          .select('*')
+          .eq('type', 'impact')
+          .single();
+        
+        if (error) throw error;
+        if (data) {
           setImpactStats({
-            totalMealsShared: data.totalMealsShared || 0,
-            totalUsersActive: data.totalUsersActive || 0,
-            totalFoodWasteSaved: data.totalFoodWasteSaved || 0,
-            co2Saved: data.co2Saved || 0,
+            totalMealsShared: data.total_meals_shared || 0,
+            totalUsersActive: data.total_users_active || 0,
+            totalFoodWasteSaved: data.total_food_waste_saved || 0,
+            co2Saved: data.co2_saved || 0,
           });
         }
       } catch (e) {

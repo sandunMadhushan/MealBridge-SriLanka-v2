@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "../firebase";
+import { supabase } from "../supabase";
 
 function useCollection<T = any>(collectionName: string) {
   const [documents, setDocuments] = useState<T[]>([]);
@@ -11,12 +10,12 @@ function useCollection<T = any>(collectionName: string) {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const colRef = collection(db, collectionName);
-      const snapshot = await getDocs(colRef);
-      const docs = snapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as T)
-      );
-      setDocuments(docs);
+      const { data, error } = await supabase
+        .from(collectionName)
+        .select('*');
+      
+      if (error) throw error;
+      setDocuments(data || []);
       setError(null);
     } catch (err: any) {
       setError(err.message);

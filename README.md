@@ -36,7 +36,7 @@ MealBridge Bolt is a modern, real-time platform designed to reduce food waste an
 
 - **Frontend**: React.js (Vite for build)
 - **State Management**: React Context API
-- **Auth/Database/Storage**: Firebase (Auth, Firestore, Storage)
+- **Auth/Database/Storage**: Supabase (Auth, Database, Storage)
 - **Deployment**: Netlify
 - **Styling**: Tailwind CSS
 - **Map Integration**: Google Maps Embed API (optional)
@@ -46,7 +46,7 @@ MealBridge Bolt is a modern, real-time platform designed to reduce food waste an
 ### Prerequisites
 
 - Node.js (v16+ recommended)
-- Firebase project (with Auth, Firestore, Storage enabled)
+- Supabase project (with Auth, Database, Storage enabled)
 - Netlify/GitHub account for deployment
 
 ### Installation
@@ -65,15 +65,11 @@ cd mealbridge-bolt
 cp .env.example .env
 ```
 
-    - Add your Firebase config values in `.env`:
+    - Add your Supabase config values in `.env`:
 
 ```
-VITE_APP_FIREBASE_API_KEY=
-VITE_APP_FIREBASE_AUTH_DOMAIN=
-VITE_APP_FIREBASE_PROJECT_ID=
-VITE_APP_FIREBASE_STORAGE_BUCKET=
-VITE_APP_FIREBASE_MESSAGING_SENDER_ID=
-VITE_APP_FIREBASE_APP_ID=
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 3. **Install dependencies**
@@ -142,7 +138,7 @@ MIT License — see [LICENSE](LICENSE)
 ## 🙏 Acknowledgments
 
 - All Sri Lankan NGOs and restaurants supporting the project
-- Open source community (Firebase, React, Tailwind CSS)
+- Open source community (Supabase, React, Tailwind CSS)
 - Early testers and volunteers
 
 ## 🚧 Roadmap \& Future Plans
