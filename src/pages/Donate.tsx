@@ -305,7 +305,7 @@ export default function Donate() {
         expiry = new Date(`${form.expiryDate}T${form.expiryTime}:00`);
       }
 
-      const categoryObj = foodCategories.find((c) => c.id === form.category);
+      // const categoryObj = foodCategories.find((c) => c.id === form.category);
 
       let donorInfo = undefined;
       if (user) {
