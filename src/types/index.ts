@@ -47,6 +47,16 @@ export interface FoodListing {
   claimedAt?: Date;
   deliveryRequested: boolean;
   safetyChecklist: SafetyChecklist;
+  // For Supabase compatibility
+  created_by?: string;
+  servings?: number;
+}
+
+// Extended type for listings with joined donor data
+export interface FoodListingWithDonor extends FoodListing {
+  donor_name?: string;
+  donor_avatar?: string;
+  donation_count?: number;
 }
 
 export interface Location {

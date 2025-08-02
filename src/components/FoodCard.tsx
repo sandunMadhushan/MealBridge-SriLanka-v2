@@ -1,4 +1,4 @@
-import { FoodListing } from "../types";
+import { FoodListingWithDonor } from "../types";
 import {
   MapPinIcon,
   ClockIcon,
@@ -8,7 +8,7 @@ import {
 import { cn } from "../utils/cn";
 
 interface FoodCardProps {
-  listing: FoodListing;
+  listing: FoodListingWithDonor;
   foodCategories: any[];
   users: any[];
   currentUserId?: string;
@@ -90,13 +90,39 @@ export default function FoodCard({
   const isUrgent = timeUntilExpiry !== null && timeUntilExpiry <= 6;
 
   const category = getCategoryObj(listing.category, foodCategories);
-  const donor = getDonorObj(listing.donor, users);
-  const donorName = donor.name || "Unknown Donor";
-  const donorInitial = donor.name ? donor.name.charAt(0) : "?";
-  const donationsGiven =
-    typeof donor.stats?.donationsGiven === "number"
-      ? donor.stats.donationsGiven
-      : "?";
+
+  // Use the joined donor data from the new hook if available
+  let donorName = "Unknown Donor";
+  let donorInitial = "?";
+  let donationsGiven: string | number = "?";
+  let donorAvatar = null;
+
+  if (listing.donor_name) {
+    // Data from the new hook with joined donor info
+    donorName = listing.donor_name;
+    donorInitial = listing.donor_name.charAt(0);
+    donationsGiven = listing.donation_count || 0;
+    donorAvatar = listing.donor_avatar;
+  } else {
+    // Fallback to old method
+    const donor = getDonorObj(listing.donor, users);
+    donorName = donor.name || "Unknown Donor";
+    donorInitial = donor.name ? donor.name.charAt(0) : "?";
+    donationsGiven =
+      typeof donor.stats?.donationsGiven === "number"
+        ? donor.stats.donationsGiven
+        : "?";
+  }
+
+  // Debug logging
+  console.log("FoodCard donor debug:", {
+    listing_id: listing.id,
+    donor_name: donorName,
+    donor_avatar: donorAvatar,
+    donation_count: donationsGiven,
+    created_by: listing.created_by,
+    has_joined_data: !!listing.donor_name,
+  });
 
   // Check if this is the donor's own listing
   const isDonorOwnListing =
@@ -235,10 +261,18 @@ export default function FoodCard({
         )}
         {/* Donor Info */}
         <div className="flex items-center pt-2 space-x-2 border-t border-gray-100">
-          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-100">
-            <span className="text-sm font-medium text-primary-600">
-              {donorInitial}
-            </span>
+          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-100 overflow-hidden">
+            {donorAvatar ? (
+              <img
+                src={donorAvatar}
+                alt={donorName}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-sm font-medium text-primary-600">
+                {donorInitial}
+              </span>
+            )}
           </div>
           <div>
             <p className="text-sm font-medium text-gray-900">{donorName}</p>

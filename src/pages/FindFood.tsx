@@ -7,6 +7,7 @@ import {
 import FoodCard from "../components/FoodCard";
 import { cn } from "../utils/cn";
 import useCollection from "../hooks/useCollection";
+import useFoodListingsWithDonors from "../hooks/useFoodListingsWithDonors";
 import ClaimFoodModal from "../components/ClaimFoodModal";
 import RequestFoodModal from "../components/RequestFoodModal";
 import DeliveryModal from "../components/DeliveryModal";
@@ -37,10 +38,10 @@ export default function FindFood() {
 
   // LIVE DATA
   const {
-    documents: foodListings = [],
+    listings: foodListings = [],
     loading: listingsLoading,
     refresh: refreshListings,
-  } = useCollection(TABLES.FOOD_LISTINGS);
+  } = useFoodListingsWithDonors();
   const { documents: foodCategories = [], loading: categoriesLoading } =
     useCollection(TABLES.FOOD_CATEGORIES);
   const { documents: users = [], loading: usersLoading } = useCollection(
@@ -160,28 +161,6 @@ export default function FindFood() {
       icon: "❓",
       color: "bg-gray-200 text-gray-700",
     };
-  }
-
-  // Look up donor info from users if needed
-  function getDonorObj(donorField: any) {
-    if (donorField && donorField.name) return donorField;
-    if (donorField && donorField.email) {
-      return (
-        users.find((u: any) => u.email === donorField.email) || {
-          name: donorField.email,
-          stats: { donationsGiven: "?" },
-        }
-      );
-    }
-    if (donorField && donorField.id) {
-      return (
-        users.find((u: any) => u.id === donorField.id) || {
-          name: "Unknown Donor",
-          stats: { donationsGiven: "?" },
-        }
-      );
-    }
-    return { name: "Unknown Donor", stats: { donationsGiven: "?" } };
   }
 
   // Defensive expiry date conversion
@@ -466,11 +445,16 @@ export default function FindFood() {
             ) : filteredAndSortedListings.length > 0 ? (
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                 {filteredAndSortedListings.map((listing: any) => {
-                  // fill in category/donor for each listing
+                  // fill in category for each listing
                   const displayCategory = getCategoryObj(
                     listing.category_id || listing.category
                   );
-                  const displayDonor = getDonorObj(listing.donor);
+
+                  // Use the donor data from the hook directly (it's already enriched)
+                  const displayDonor = listing.donor || {
+                    name: listing.donor_name || "Unknown Donor",
+                    stats: { donationsGiven: listing.donation_count || "?" },
+                  };
 
                   // Normalize the data structure for FoodCard
                   const normalizedListing = {
