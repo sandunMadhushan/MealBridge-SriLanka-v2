@@ -81,14 +81,18 @@ export default function Community() {
     const now = new Date();
     return events
       .filter((event: any) => {
-        const eventDate = event.date?.toDate
-          ? event.date.toDate()
-          : new Date(event.date);
+        const eventDate = event.event_date?.toDate
+          ? event.event_date.toDate()
+          : new Date(event.event_date || event.date);
         return eventDate > now;
       })
       .sort((a: any, b: any) => {
-        const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date);
-        const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date);
+        const dateA = a.event_date?.toDate
+          ? a.event_date.toDate()
+          : new Date(a.event_date || a.date);
+        const dateB = b.event_date?.toDate
+          ? b.event_date.toDate()
+          : new Date(b.event_date || b.date);
         return dateA.getTime() - dateB.getTime();
       });
   }, [events]);
@@ -120,7 +124,7 @@ export default function Community() {
     setJoinLoading(eventId);
     try {
       const event = events.find((e: any) => e.id === eventId);
-      const currentAttendees = event?.attendees || [];
+      const currentAttendees = event?.attendee_ids || event?.attendees || [];
       const isAlreadyJoined = currentAttendees.includes(user.id);
 
       if (isAlreadyJoined) {
@@ -131,25 +135,32 @@ export default function Community() {
         const { error: updateError } = await supabase
           .from(TABLES.EVENTS)
           .update({
-            attendees: updatedAttendees,
-            attendee_count: Math.max(0, (event.attendee_count || 0) - 1),
+            attendee_ids: updatedAttendees,
+            current_attendees: Math.max(
+              0,
+              (event.current_attendees || event.attendee_count || 0) - 1
+            ),
+            updated_at: new Date().toISOString(),
           })
           .eq("id", eventId);
 
         if (updateError) throw updateError;
 
         // Create notification for event creator
-        if (event.created_by_id && event.created_by_id !== user.id) {
+        if (
+          (event.organizer_id || event.created_by_id) &&
+          (event.organizer_id || event.created_by_id) !== user.id
+        ) {
           const { error: notificationError } = await supabase
             .from(TABLES.NOTIFICATIONS)
             .insert({
-              user_id: event.created_by_id,
+              user_id: event.organizer_id || event.created_by_id,
               type: "event_left",
               title: "Someone Left Your Event",
               message: `${
                 user.user_metadata?.name || user.email
               } left your event: ${event.title}`,
-              read: false,
+              is_read: false,
               created_at: new Date().toISOString(),
               related_id: eventId,
             });
@@ -164,25 +175,30 @@ export default function Community() {
         const { error: updateError } = await supabase
           .from(TABLES.EVENTS)
           .update({
-            attendees: updatedAttendees,
-            attendee_count: (event.attendee_count || 0) + 1,
+            attendee_ids: updatedAttendees,
+            current_attendees:
+              (event.current_attendees || event.attendee_count || 0) + 1,
+            updated_at: new Date().toISOString(),
           })
           .eq("id", eventId);
 
         if (updateError) throw updateError;
 
         // Create notification for event creator
-        if (event.created_by_id && event.created_by_id !== user.id) {
+        if (
+          (event.organizer_id || event.created_by_id) &&
+          (event.organizer_id || event.created_by_id) !== user.id
+        ) {
           const { error: notificationError } = await supabase
             .from(TABLES.NOTIFICATIONS)
             .insert({
-              user_id: event.created_by_id,
+              user_id: event.organizer_id || event.created_by_id,
               type: "event_joined",
               title: "New Event Attendee!",
               message: `${
                 user.user_metadata?.name || user.email
               } joined your event: ${event.title}`,
-              read: false,
+              is_read: false,
               created_at: new Date().toISOString(),
               related_id: eventId,
             });
@@ -200,7 +216,7 @@ export default function Community() {
             type: "event_joined_confirmation",
             title: "Event Joined Successfully!",
             message: `You have successfully joined: ${event.title}`,
-            read: false,
+            is_read: false,
             created_at: new Date().toISOString(),
             related_id: eventId,
           });
@@ -334,16 +350,18 @@ export default function Community() {
                 {volunteers.map((volunteer: any) => (
                   <div key={volunteer.id} className="card">
                     <div className="flex items-center mb-4 space-x-4">
-                      {volunteer.photoURL ? (
+                      {volunteer.profile_image_url || volunteer.photoURL ? (
                         <img
-                          src={volunteer.photoURL}
+                          src={
+                            volunteer.profile_image_url || volunteer.photoURL
+                          }
                           alt={volunteer.name}
                           className="object-cover w-16 h-16 rounded-full"
                         />
                       ) : (
                         <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary-100">
                           <span className="text-xl font-bold text-primary-600">
-                            {volunteer.name?.charAt(0) || "U"}
+                            {volunteer.name?.charAt(0)?.toUpperCase() || "U"}
                           </span>
                         </div>
                       )}
@@ -438,16 +456,16 @@ export default function Community() {
                       >
                         {index + 1}
                       </div>
-                      {user.photoURL ? (
+                      {user.profile_image_url || user.photoURL ? (
                         <img
-                          src={user.photoURL}
+                          src={user.profile_image_url || user.photoURL}
                           alt={user.name}
                           className="object-cover w-12 h-12 rounded-full"
                         />
                       ) : (
                         <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary-100">
                           <span className="font-medium text-primary-600">
-                            {user.name?.charAt(0) || "U"}
+                            {user.name?.charAt(0)?.toUpperCase() || "U"}
                           </span>
                         </div>
                       )}
@@ -492,10 +510,13 @@ export default function Community() {
             ) : (
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {upcomingEvents.map((event: any) => {
-                  const eventDate = event.date?.toDate
-                    ? event.date.toDate()
-                    : new Date(event.date);
-                  const isJoined = user && event.attendees?.includes(user.id);
+                  const eventDate = event.event_date?.toDate
+                    ? event.event_date.toDate()
+                    : new Date(event.event_date || event.date);
+                  const isJoined =
+                    user &&
+                    (event.attendee_ids?.includes(user.id) ||
+                      event.attendees?.includes(user.id));
                   const isLoading = joinLoading === event.id;
 
                   return (
@@ -506,6 +527,7 @@ export default function Community() {
                       <div className="relative mb-4 overflow-hidden rounded-lg">
                         <img
                           src={
+                            event.image_url ||
                             event.image ||
                             "https://images.pexels.com/photos/6646918/pexels-photo-6646918.jpeg?auto=compress&cs=tinysrgb&w=800"
                           }
@@ -542,13 +564,20 @@ export default function Community() {
                           </div>
                           <div className="flex items-center text-sm text-gray-600">
                             <MapPinIcon className="w-4 h-4 mr-2" />
-                            {event.location}, {event.city}
+                            {typeof event.location === "object"
+                              ? `${event.location?.address || ""}, ${
+                                  event.location?.city || ""
+                                }`
+                              : `${event.location || ""}, ${event.city || ""}`}
                           </div>
                           <div className="flex items-center text-sm text-gray-600">
                             <UserGroupIcon className="w-4 h-4 mr-2" />
-                            {event.attendeeCount || 0} attending
-                            {event.maxAttendees &&
-                              ` (max ${event.maxAttendees})`}
+                            {event.current_attendees ||
+                              event.attendee_count ||
+                              0}{" "}
+                            attending
+                            {event.max_attendees &&
+                              ` (max ${event.max_attendees})`}
                           </div>
                         </div>
 

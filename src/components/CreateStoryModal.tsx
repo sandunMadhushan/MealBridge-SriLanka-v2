@@ -177,6 +177,26 @@ export default function CreateStoryModal({
       }
 
       if (editingStory?.id) {
+        // Get the user's profile image for updates too
+        let authorPhotoUrl = user.user_metadata?.avatar_url || "";
+
+        // Try to get profile image from users table if not available from auth metadata
+        if (!authorPhotoUrl) {
+          try {
+            const { data: userData } = await supabase
+              .from("users")
+              .select("profile_image_url")
+              .eq("id", user.id)
+              .single();
+
+            if (userData?.profile_image_url) {
+              authorPhotoUrl = userData.profile_image_url;
+            }
+          } catch (error) {
+            console.log("Could not fetch user profile image:", error);
+          }
+        }
+
         // Update existing story document
         const { error: updateError } = await supabase
           .from(TABLES.COMMUNITY_STORIES)
@@ -185,6 +205,7 @@ export default function CreateStoryModal({
             content: formData.content.trim(),
             category: formData.category,
             images: imageUrls, // Match DB schema field name
+            author_photo_url: authorPhotoUrl, // Update profile image in case it changed
             updated_at: new Date().toISOString(),
           })
           .eq("id", editingStory.id);
@@ -246,6 +267,7 @@ export default function CreateStoryModal({
         });
         setError(null);
         setSuccess(null);
+        setLoading(false); // Reset loading state
       }, 1500);
     } catch (err) {
       setError("Failed to share your story. Please try again.");

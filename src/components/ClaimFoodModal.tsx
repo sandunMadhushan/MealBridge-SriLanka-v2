@@ -117,7 +117,7 @@ export default function ClaimFoodModal({
             message: `${
               user.user_metadata?.name || user.email
             } wants to claim your food: ${listing.title}`,
-            read: false,
+            is_read: false,
             created_at: new Date().toISOString(),
             related_id: claimData.id,
           });

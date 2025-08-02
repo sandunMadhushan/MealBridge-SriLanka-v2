@@ -119,7 +119,7 @@ export default function RequestFoodModal({
             } wants to buy your food: ${listing.title} (${
               formData.quantity
             } servings for LKR ${totalPrice})`,
-            read: false,
+            is_read: false,
             created_at: new Date().toISOString(),
             related_id: requestData.id,
           });

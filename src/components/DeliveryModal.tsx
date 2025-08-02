@@ -202,7 +202,7 @@ export default function DeliveryModal({
             } requested delivery for: ${listing.title} to ${formData.city}, ${
               formData.district
             }`,
-            read: false,
+            is_read: false,
             created_at: new Date().toISOString(),
             related_id: deliveryData.id,
           });
@@ -235,7 +235,7 @@ export default function DeliveryModal({
             type: "delivery_request",
             title: "New Delivery Opportunity",
             message: `Delivery needed in ${formData.district} - Fee: LKR ${deliveryFee}`,
-            read: false,
+            is_read: false,
             created_at: new Date().toISOString(),
             related_id: deliveryData.id,
           }));

@@ -164,23 +164,29 @@ export default function CreateEventModal({
       const { error: eventError } = await supabase.from(TABLES.EVENTS).insert({
         title: formData.title,
         description: formData.description,
-        date: eventDateTime.toISOString(),
-        location: formData.location,
-        city: formData.city,
-        district: formData.district,
+        event_date: eventDateTime.toISOString(),
+        location: {
+          address: formData.location,
+          city: formData.city,
+          district: formData.district,
+        },
         max_attendees: parseInt(formData.maxAttendees) || 100,
         category: formData.category,
-        image: imageUrl,
-        created_by_id: user.id,
-        created_by_name: user.user_metadata?.name || user.email,
-        created_by_email: user.email,
-        attendees: [],
-        attendee_count: 0,
+        image_url: imageUrl,
+        organizer_id: user.id,
+        attendee_ids: [],
+        current_attendees: 0,
         status: "upcoming",
+        contact_info: {
+          name: user.user_metadata?.name || user.email,
+          email: user.email,
+        },
         created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       });
 
       if (eventError) {
+        console.error("Event creation error:", eventError);
         throw eventError;
       }
 
@@ -194,7 +200,7 @@ export default function CreateEventModal({
           type: "event_created",
           title: "Event Created Successfully!",
           message: `Your event "${formData.title}" has been created and is now visible to the community.`,
-          read: false,
+          is_read: false,
           created_at: new Date().toISOString(),
         });
 

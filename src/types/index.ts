@@ -84,7 +84,7 @@ export interface Notification {
     | "impact_milestone";
   title: string;
   message: string;
-  read: boolean;
+  is_read: boolean;
   createdAt: Date;
   actionUrl?: string;
 }

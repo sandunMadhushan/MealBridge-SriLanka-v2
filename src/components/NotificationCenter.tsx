@@ -29,7 +29,7 @@ interface Notification {
     | "event_joined_confirmation";
   title: string;
   message: string;
-  read: boolean;
+  is_read: boolean;
   createdAt: any;
   relatedId?: string;
   actionData?: any;
@@ -85,13 +85,13 @@ export default function NotificationCenter() {
     };
   }, [user]);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   const markAsRead = async (notificationId: string) => {
     try {
       const { error } = await supabase
         .from(TABLES.NOTIFICATIONS)
-        .update({ read: true })
+        .update({ is_read: true })
         .eq("id", notificationId);
 
       if (error) throw error;
@@ -104,7 +104,7 @@ export default function NotificationCenter() {
     setSelectedNotification(notification);
     setLoading(true);
 
-    if (!notification.read) {
+    if (!notification.is_read) {
       await markAsRead(notification.id);
     }
 
@@ -245,7 +245,7 @@ export default function NotificationCenter() {
         type,
         title,
         message,
-        read: false,
+        is_read: false,
         created_at: new Date().toISOString(),
         related_id: relatedId,
       });
@@ -326,14 +326,14 @@ export default function NotificationCenter() {
                   onClick={() => handleNotificationClick(notification)}
                   className={cn(
                     "p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors",
-                    !notification.read && "bg-blue-50"
+                    !notification.is_read && "bg-blue-50"
                   )}
                 >
                   <div className="flex items-start space-x-3">
                     <div
                       className={cn(
                         "p-2 rounded-full",
-                        notification.read
+                        notification.is_read
                           ? "bg-gray-100 text-gray-600"
                           : "bg-primary-100 text-primary-600"
                       )}
@@ -344,7 +344,7 @@ export default function NotificationCenter() {
                       <p
                         className={cn(
                           "text-sm font-medium",
-                          notification.read
+                          notification.is_read
                             ? "text-gray-900"
                             : "text-gray-900 font-semibold"
                         )}
@@ -358,7 +358,7 @@ export default function NotificationCenter() {
                         {formatDate(notification.createdAt)}
                       </p>
                     </div>
-                    {!notification.read && (
+                    {!notification.is_read && (
                       <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                     )}
                   </div>
