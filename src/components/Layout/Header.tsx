@@ -9,6 +9,7 @@ import { cn } from "../../utils/cn";
 import { useAuth } from "../../context/AuthContext";
 import { supabase } from "../../supabase";
 import NotificationCenter from "../NotificationCenter";
+import LanguageSelector from "../LanguageSelector";
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -29,10 +30,6 @@ export default function Header() {
   const { user, loading } = useAuth();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userProfileImage, setUserProfileImage] = useState<string | null>(null);
-  const [dropdownPosition, setDropdownPosition] = useState<{
-    top: number;
-    left: number;
-  } | null>(null);
 
   useEffect(() => {
     // Close menu on outside click
@@ -137,6 +134,7 @@ export default function Header() {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex md:items-center md:space-x-4">
+            <LanguageSelector showLabel={false} />
             {!loading && user && <NotificationCenter />}
 
             {!loading && user ? (
@@ -149,7 +147,7 @@ export default function Header() {
                     if (!userRole) await fetchUserRole();
                   }}
                   aria-haspopup="true"
-                  aria-expanded={profileMenuOpen ? "true" : "false"}
+                  aria-expanded={profileMenuOpen}
                   aria-label="Open user menu"
                   type="button"
                 >
@@ -167,25 +165,7 @@ export default function Header() {
                   </span>
                 </button>
                 {profileMenuOpen && (
-                  <div
-                    ref={profileMenuRef}
-                    className="z-40 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg w-44"
-                    style={{
-                      position: "absolute",
-                      top:
-                        dropdownPosition && dropdownPosition.top
-                          ? dropdownPosition.top -
-                            profileButtonRef.current!.offsetParent!.getBoundingClientRect()
-                              .top
-                          : "100%",
-                      left:
-                        dropdownPosition && dropdownPosition.left
-                          ? dropdownPosition.left -
-                            profileButtonRef.current!.offsetParent!.getBoundingClientRect()
-                              .left
-                          : undefined,
-                    }}
-                  >
+                  <div ref={profileMenuRef} className="profile-dropdown">
                     <button
                       className="block w-full px-4 py-2 text-left text-gray-700 hover:bg-primary-50"
                       onClick={() => {
@@ -254,6 +234,12 @@ export default function Header() {
                   {item.name}
                 </Link>
               ))}
+
+              {/* Language Selector for Mobile */}
+              <div className="px-3 py-2">
+                <LanguageSelector showLabel={true} />
+              </div>
+
               <div className="px-3 py-2">
                 {!loading && user ? (
                   <div className="flex flex-col space-y-1">
@@ -283,11 +269,7 @@ export default function Header() {
                     {profileMenuOpen && (
                       <div
                         ref={profileMenuRef}
-                        className="w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg"
-                        style={{
-                          position: "absolute",
-                          left: 0,
-                        }}
+                        className="mobile-profile-dropdown"
                       >
                         <button
                           className="block w-full px-4 py-2 text-left text-gray-700 hover:bg-primary-50"
