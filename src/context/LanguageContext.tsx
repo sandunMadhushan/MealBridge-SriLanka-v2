@@ -36,6 +36,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
   const [isTranslating, setIsTranslating] = useState(false);
   const [isGoogleTranslateLoaded, setIsGoogleTranslateLoaded] = useState(false);
   const [hasInitialTranslation, setHasInitialTranslation] = useState(false);
+  const [isSwitchingLanguage, setIsSwitchingLanguage] = useState(false);
 
   // Initialize Google Translate once
   useEffect(() => {
@@ -173,71 +174,37 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
 
   // Handle initial language setup after Google Translate loads
   useEffect(() => {
-    if (isGoogleTranslateLoaded && !hasInitialTranslation) {
-      setHasInitialTranslation(true);
+    if (!isGoogleTranslateLoaded || hasInitialTranslation) {
+      return;
+    }
 
-      // Check if we just switched to English (session flag)
-      const justSwitchedToEnglish = sessionStorage.getItem(
-        "mealbridge-switching-to-english"
+    // This effect should only run once on initial load.
+    setHasInitialTranslation(true);
+
+    // Check if we just reloaded after switching to English
+    const justSwitchedToEnglish = sessionStorage.getItem(
+      "mealbridge-switching-to-english"
+    );
+
+    if (justSwitchedToEnglish) {
+      console.log(
+        "🇬🇧 Page reloaded after switching to English. State is clean."
       );
-      if (justSwitchedToEnglish) {
-        console.log(
-          "🇬🇧 Recently switched to English, skipping auto-translation and cleaning session"
-        );
-        sessionStorage.removeItem("mealbridge-switching-to-english");
-
-        // Ensure we're in clean English state
-        const hasTranslateHash = window.location.href.includes("#googtrans");
-        if (hasTranslateHash) {
-          console.log("🧹 Cleaning up translate hash for English");
-          const cleanUrl = window.location.href.split("#googtrans")[0];
-          window.history.replaceState({}, document.title, cleanUrl);
-        }
-        return;
-      }
-
-      // Check the current state - if currentLanguage is English, don't auto-translate
-      console.log(`📍 Current language state: ${currentLanguage}`);
-
-      if (currentLanguage === "en") {
-        console.log("🇬🇧 Current language is English, ensuring clean state");
-        const hasTranslateHash = window.location.href.includes("#googtrans");
-        if (hasTranslateHash) {
-          console.log("🧹 Cleaning up translate hash for English");
-          const cleanUrl = window.location.href.split("#googtrans")[0];
-          window.history.replaceState({}, document.title, cleanUrl);
-        }
-        return;
-      }
-
-      // Only auto-translate if we have a saved non-English language AND currentLanguage matches it
-      const savedLanguage = localStorage.getItem("mealbridge-language");
-      const hasTranslateHash = window.location.href.includes("#googtrans");
-
-      // Double-check: if saved language is English but currentLanguage is not, update currentLanguage
-      if (savedLanguage === "en" && currentLanguage !== "en") {
-        console.log(
-          "🔧 Correcting language state mismatch - setting to English"
-        );
+      sessionStorage.removeItem("mealbridge-switching-to-english");
+      // Ensure language state is 'en' and do not proceed to auto-translate
+      if (currentLanguage !== "en") {
         setCurrentLanguage("en");
-        return;
       }
+      return;
+    }
 
-      // Only trigger translation if:
-      // 1. We have a saved non-English language
-      // 2. The current language state matches the saved language
-      // 3. The page doesn't already have a translation active
-      if (
-        savedLanguage &&
-        savedLanguage !== "en" &&
-        savedLanguage === currentLanguage &&
-        !hasTranslateHash
-      ) {
-        setTimeout(() => {
-          console.log(`🔄 Initial auto-translation to: ${savedLanguage}`);
-          triggerTranslation(savedLanguage);
-        }, 1000);
-      }
+    // Proceed with auto-translation for non-English languages
+    const savedLanguage = localStorage.getItem("mealbridge-language");
+    if (savedLanguage && savedLanguage !== "en") {
+      console.log(`� Auto-translating to saved language: ${savedLanguage}`);
+      // Align state and trigger translation
+      setCurrentLanguage(savedLanguage);
+      triggerTranslation(savedLanguage);
     }
   }, [isGoogleTranslateLoaded, hasInitialTranslation, currentLanguage]);
 
@@ -250,73 +217,17 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
 
     // For English, we need to reset to original language completely
     if (languageCode === "en") {
-      console.log("🇬🇧 Resetting to English (original language)");
+      console.log("🇬🇧 Resetting to English by reloading the page.");
 
-      // First, update localStorage to ensure persistence
-      localStorage.setItem("mealbridge-language", "en");
+      // Delete the Google Translate cookie that stores the last language
+      document.cookie =
+        "googtrans=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
 
-      // Method 1: Try to use Google Translate combo to reset
-      let attempts = 0;
-      const maxAttempts = 10;
+      // A page reload is the most reliable way to clear Google Translate's state.
+      // The `setLanguage` function has already set localStorage and a sessionStorage flag
+      // to handle the reload gracefully and prevent re-translation.
+      window.location.reload();
 
-      const resetToEnglish = () => {
-        const combo = document.querySelector(
-          ".goog-te-combo"
-        ) as HTMLSelectElement;
-        attempts++;
-
-        if (combo) {
-          console.log(
-            `📍 Found combo, resetting to English (attempt ${attempts})`
-          );
-
-          // Check if already in original state
-          if (combo.value === "" || combo.value === "en") {
-            console.log("✅ Already in English state");
-            return;
-          }
-
-          // Reset to original language (empty value)
-          combo.value = "";
-          combo.dispatchEvent(new Event("change", { bubbles: true }));
-
-          // Also try clicking the first option which should be original
-          const firstOption = combo.querySelector(
-            'option[value=""]'
-          ) as HTMLOptionElement;
-          if (firstOption) {
-            firstOption.selected = true;
-            combo.dispatchEvent(new Event("change", { bubbles: true }));
-          }
-
-          console.log("✅ Google Translate reset to original language");
-
-          // If there's still a hash after reset, clean URL
-          setTimeout(() => {
-            const currentUrl = window.location.href;
-            if (currentUrl.includes("#googtrans")) {
-              const cleanUrl = currentUrl.split("#googtrans")[0];
-              window.history.replaceState({}, document.title, cleanUrl);
-            }
-          }, 1000);
-        } else if (attempts < maxAttempts) {
-          console.log(
-            `⏳ Combo not found yet, retrying reset... (${attempts}/${maxAttempts})`
-          );
-          setTimeout(resetToEnglish, 300);
-        } else {
-          // Fallback: Clean URL if combo method fails
-          console.log("⚠️ Combo reset failed, using URL cleanup fallback");
-          const currentUrl = window.location.href;
-          if (currentUrl.includes("#googtrans")) {
-            console.log("🔄 Removing Google Translate hash and reloading...");
-            const cleanUrl = currentUrl.split("#googtrans")[0];
-            window.location.replace(cleanUrl);
-          }
-        }
-      };
-
-      resetToEnglish();
       return;
     }
 
@@ -377,11 +288,12 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
 
     // Prevent unnecessary translation if we're already in the target language
     const currentSavedLanguage = localStorage.getItem("mealbridge-language");
-    if (currentSavedLanguage === language) {
+    if (currentSavedLanguage === language && !isSwitchingLanguage) {
       console.log(`✅ Already in ${language}, no change needed`);
       return;
     }
 
+    setIsSwitchingLanguage(true);
     setIsTranslating(true);
     setCurrentLanguage(language);
 
@@ -405,6 +317,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
     // Reset translating state
     setTimeout(() => {
       setIsTranslating(false);
+      setIsSwitchingLanguage(false);
     }, 1500);
   };
 
