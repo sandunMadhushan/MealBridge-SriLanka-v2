@@ -66,11 +66,11 @@ export default function Header() {
     if (userRole) return userRole;
     try {
       const { data, error } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', user.id)
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
         .single();
-      
+
       if (error) throw error;
       if (data) {
         const role = data.role;
@@ -270,7 +270,9 @@ export default function Header() {
                       ) : (
                         <UserCircleIcon className="inline w-5 h-5 text-primary-600" />
                       )}
-                      <span>{user.user_metadata?.full_name || user.email || "User"}</span>
+                      <span>
+                        {user.user_metadata?.full_name || user.email || "User"}
+                      </span>
                     </button>
                     {profileMenuOpen && (
                       <div

@@ -105,13 +105,18 @@ export default function Auth() {
     try {
       const { error } = await supabase.from("users").insert({
         id: pendingGoogleUser.uid,
-        name: pendingGoogleUser.name,
         email: pendingGoogleUser.email,
-        user_type: selectedRole,
-        location: formData.location,
-        phone: formData.phone,
+        name: pendingGoogleUser.name,
+        phone: formData.phone || null,
+        address: formData.location ? { address: formData.location } : null,
+        role: selectedRole,
+        profile_image_url: null,
+        bio: null,
+        is_verified: true,
         verified: true,
         created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        joined_at: new Date().toISOString(),
       });
 
       if (error) throw error;
@@ -144,17 +149,17 @@ export default function Auth() {
 
         if (error) throw error;
 
-        // Fetch the user profile to get the exact user_type
+        // Fetch the user profile to get the exact role
         const { data: userProfile, error: profileError } = await supabase
           .from("users")
-          .select("user_type")
+          .select("role")
           .eq("id", data.user.id)
           .single();
 
         if (profileError) throw profileError;
 
         if (userProfile) {
-          const userType = userProfile.user_type;
+          const userType = userProfile.role;
           setLoading(false);
           if (userType === "donor") {
             navigate("/dashboard/donor");
@@ -189,20 +194,31 @@ export default function Auth() {
 
         if (error) throw error;
 
-        // Store extra user info in users table
+        // Wait a moment for auth to fully process
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Store complete user info in users table
         if (data.user) {
           const { error: insertError } = await supabase.from("users").insert({
             id: data.user.id,
-            name: formData.name,
             email: formData.email,
-            user_type: selectedRole,
-            location: formData.location,
-            phone: formData.phone,
+            name: formData.name,
+            phone: formData.phone || null,
+            address: formData.location ? { address: formData.location } : null,
+            role: selectedRole,
+            profile_image_url: null,
+            bio: null,
+            is_verified: false,
             verified: false,
             created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            joined_at: new Date().toISOString(),
           });
 
-          if (insertError) throw insertError;
+          if (insertError) {
+            console.error("Insert error:", insertError);
+            throw insertError;
+          }
         }
         setSuccess("Registration successful! You can now sign in.");
         setLoading(false);

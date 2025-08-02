@@ -27,20 +27,24 @@ export default function Profile() {
       setLoading(true);
       try {
         const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
+          .from("users")
+          .select("*")
+          .eq("id", user.id)
           .single();
-        
+
         if (error) throw error;
         if (data) {
           setProfile({
             name: data.name || "",
             email: data.email || user.email || "",
-            location: data.location || "",
+            location:
+              typeof data.address === "object" && data.address?.address
+                ? data.address.address
+                : data.address || "",
             phone: data.phone || "",
             role: data.role || "",
-            photoURL: user.user_metadata?.avatar_url || "",
+            photoURL:
+              data.profile_image_url || user.user_metadata?.avatar_url || "",
           });
         } else {
           setError("Profile not found.");
@@ -75,42 +79,42 @@ export default function Profile() {
     try {
       let photoURLToSave = profile.photoURL;
       if (newPhotoFile) {
-        const fileExt = newPhotoFile.name.split('.').pop();
+        const fileExt = newPhotoFile.name.split(".").pop();
         const fileName = `${user.id}_${Date.now()}.${fileExt}`;
-        
+
         const { error: uploadError } = await supabase.storage
-          .from('profile-photos')
+          .from("profile-images")
           .upload(fileName, newPhotoFile);
-        
+
         if (uploadError) throw uploadError;
-        
-        const { data: { publicUrl } } = supabase.storage
-          .from('profile-photos')
-          .getPublicUrl(fileName);
-        
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("profile-images").getPublicUrl(fileName);
+
         photoURLToSave = publicUrl;
       }
-      
+
       const { error } = await supabase
-        .from('users')
+        .from("users")
         .update({
           name: profile.name,
-          location: profile.location,
+          address: { address: profile.location },
           phone: profile.phone,
-          photo_url: photoURLToSave,
+          profile_image_url: photoURLToSave,
         })
-        .eq('id', user.id);
-      
+        .eq("id", user.id);
+
       if (error) throw error;
-      
+
       // Update auth user metadata
       const { error: authError } = await supabase.auth.updateUser({
         data: {
           full_name: profile.name,
           avatar_url: photoURLToSave,
-        }
+        },
       });
-      
+
       if (authError) throw authError;
       setProfile((p) => ({ ...p, photoURL: photoURLToSave }));
       setNewPhotoFile(null);
