@@ -43,13 +43,10 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
     }
 
     isGoogleTranslateInitializing = true;
-    // console.log("Loading Google Translate...");
 
     // Prevent conflicts with existing global function
     if (!(window as any).googleTranslateElementInit) {
       (window as any).googleTranslateElementInit = () => {
-        // console.log("Google Translate initializing...");
-
         try {
           if (!(window as any).google?.translate?.TranslateElement) {
             console.error("Google Translate API not available");
@@ -69,22 +66,6 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
 
           isGoogleTranslateReady = true;
           setIsGoogleTranslateLoaded(true);
-          // console.log("✅ Google Translate initialized successfully");
-
-          // Hide the Google Translate banner after a short delay
-          setTimeout(() => {
-            const banner = document.querySelector(".goog-te-banner-frame");
-            const ftab = document.querySelector(".goog-te-ftab");
-            if (banner) {
-              (banner as HTMLElement).style.display = "none";
-            }
-            if (ftab) {
-              (ftab as HTMLElement).style.display = "none";
-            }
-            // Remove any top margin Google Translate might add
-            document.body.style.top = "0";
-            document.body.style.marginTop = "0";
-          }, 1000);
         } catch (error) {
           console.error("❌ Error initializing Google Translate:", error);
           isGoogleTranslateInitializing = false;
@@ -123,62 +104,18 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
       attempts++;
 
       if (combo) {
-        console.log(
-          `🎯 Found combo on attempt ${attempts}, triggering translation...`
-        );
         combo.value = languageCode;
         combo.dispatchEvent(new Event("change", { bubbles: true }));
-        console.log(`✅ Translation triggered for: ${languageCode}`);
       } else if (attempts < maxAttempts) {
-        console.log(
-          `⏳ Combo not ready yet (${attempts}/${maxAttempts}), waiting...`
-        );
         setTimeout(findCombo, 300);
       } else {
-        console.log("⚠️ Google Translate combo not found after all attempts");
-
-        // Try alternative methods
-        console.log("🔄 Trying alternative translation methods...");
-
-        // Method 1: Try to find clickable language links
+        // Try alternative methods if combo not found
         const langLink = document.querySelector(
           `a[onclick*="${languageCode}"]`
         );
         if (langLink) {
-          console.log("🎯 Found language link, clicking...");
           (langLink as HTMLElement).click();
-          console.log(`✅ Language link clicked for: ${languageCode}`);
-          return;
         }
-
-        // Method 2: Try to trigger Google Translate directly
-        if ((window as any).google?.translate?.TranslateElement) {
-          console.log("🎯 Trying direct Google Translate API...");
-          try {
-            // Force page reload with target language
-            const url = new URL(window.location.href);
-            url.searchParams.set("sl", "en");
-            url.searchParams.set("tl", languageCode);
-            console.log(`✅ Will try URL-based translation: ${url.toString()}`);
-          } catch (error) {
-            console.log("❌ Direct API method failed:", error);
-          }
-        }
-
-        // Debug: Let's see what elements are actually created
-        const allGoogleElements =
-          document.querySelectorAll('[class*="goog-te"]');
-        console.log(
-          "🔍 Available Google Translate elements:",
-          Array.from(allGoogleElements).map((el) => el.className)
-        );
-
-        // Show all possible selectors
-        const allSelects = document.querySelectorAll("select");
-        console.log(
-          "🔍 All select elements:",
-          Array.from(allSelects).map((sel) => `${sel.className} - ${sel.id}`)
-        );
       }
     };
 
@@ -202,6 +139,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
       setIsTranslating(false);
     }, 1500);
   };
+
   return (
     <LanguageContext.Provider
       value={{

@@ -137,10 +137,50 @@ iframe.goog-te-banner-frame {
   display: none !important;
 }
 
+/* More aggressive hiding of Google Translate top banner */
+body > .skiptranslate > iframe {
+  display: none !important;
+}
+
+/* Hide all iframes that might be the translate banner */
+iframe[id^="goog-te-banner-frame"] {
+  display: none !important;
+}
+
+/* ULTIMATE Google Translate banner hiding - catches all cases */
+body > .skiptranslate,
+body > iframe.goog-te-banner-frame,
+body > div.skiptranslate,
+.goog-te-banner-frame,
+iframe.goog-te-banner-frame,
+.goog-te-ftab,
+.goog-te-banner,
+.skiptranslate iframe,
+iframe[id*="goog-te-banner"],
+iframe[src*="translate.google"],
+body > .skiptranslate > iframe {
+  display: none !important;
+  visibility: hidden !important;
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  z-index: -9999 !important;
+}
+
 /* Remove the top margin that Google Translate adds to body */
 body {
   top: 0 !important;
   margin-top: 0 !important;
+}
+
+/* Ensure body positioning is normal */
+html,
+body {
+  position: relative !important;
+  top: 0 !important;
 }
 
 /* For debugging - temporarily show the element */
