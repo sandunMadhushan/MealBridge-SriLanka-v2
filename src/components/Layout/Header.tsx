@@ -48,16 +48,7 @@ export default function Header() {
     return () => window.removeEventListener("mousedown", onClick);
   }, [profileMenuOpen]);
 
-  // Calculate dropdown menu position under the profile button for perfect alignment
-  useEffect(() => {
-    if (profileMenuOpen && profileButtonRef.current) {
-      const rect = profileButtonRef.current.getBoundingClientRect();
-      setDropdownPosition({
-        top: rect.bottom + window.scrollY + 6, // 6px margin below button
-        left: rect.left + window.scrollX,
-      });
-    }
-  }, [profileMenuOpen]);
+  // (Dropdown position state removed as it was unused)
 
   const fetchUserRole = async () => {
     if (!user) return null;
