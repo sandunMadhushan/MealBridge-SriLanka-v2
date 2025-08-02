@@ -159,7 +159,8 @@ export default function RequestFoodModal({
             <h4 className="font-medium text-gray-900">{listing.title}</h4>
             <p className="text-sm text-gray-600">{listing.quantity}</p>
             <p className="text-sm text-gray-600">
-              Location: {listing.pickupLocation?.city}
+              Location:{" "}
+              {listing.pickupLocation?.city || listing.pickup_location?.city}
             </p>
             <p className="text-sm font-medium text-secondary-600">
               Price: LKR {basePrice} per serving

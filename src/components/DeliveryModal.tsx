@@ -289,7 +289,8 @@ export default function DeliveryModal({
             <h4 className="font-medium text-gray-900">{listing.title}</h4>
             <p className="text-sm text-gray-600">{listing.quantity}</p>
             <p className="text-sm text-gray-600">
-              From: {listing.pickupLocation?.city}
+              From:{" "}
+              {listing.pickupLocation?.city || listing.pickup_location?.city}
             </p>
           </div>
 

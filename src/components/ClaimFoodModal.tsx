@@ -173,7 +173,8 @@ export default function ClaimFoodModal({
             <h4 className="font-medium text-gray-900">{listing.title}</h4>
             <p className="text-sm text-gray-600">{listing.quantity}</p>
             <p className="text-sm text-gray-600">
-              Location: {listing.pickupLocation?.city}
+              Location:{" "}
+              {listing.pickupLocation?.city || listing.pickup_location?.city}
             </p>
           </div>
 

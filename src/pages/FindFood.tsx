@@ -46,8 +46,8 @@ export default function FindFood() {
   const locations = useMemo(() => {
     const uniqueLocations = new Set<string>();
     foodListings.forEach((listing: any) => {
-      if (listing.pickupLocation?.city) {
-        uniqueLocations.add(listing.pickupLocation.city);
+      if (listing.pickup_location?.city) {
+        uniqueLocations.add(listing.pickup_location.city);
       }
     });
 
@@ -198,7 +198,8 @@ export default function FindFood() {
         listing.description?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory =
         !selectedCategory ||
-        (listing.category?.id || listing.category) === selectedCategory;
+        (listing.category_id || listing.category?.id || listing.category) ===
+          selectedCategory;
       const matchesType =
         !selectedType ||
         selectedType === "All Types" ||
@@ -211,10 +212,10 @@ export default function FindFood() {
           // Match user's location
           matchesLocation =
             !!userLocation &&
-            (listing.pickupLocation?.city === userLocation.city ||
-              listing.pickupLocation?.district === userLocation.district);
+            (listing.pickup_location?.city === userLocation.city ||
+              listing.pickup_location?.district === userLocation.district);
         } else {
-          matchesLocation = listing.pickupLocation?.city === selectedLocation;
+          matchesLocation = listing.pickup_location?.city === selectedLocation;
         }
       }
 
@@ -224,12 +225,12 @@ export default function FindFood() {
     // Sort by location proximity if user location is available
     if (userLocation && selectedLocation.startsWith("Your Location")) {
       filtered.sort((a: any, b: any) => {
-        const aIsUserCity = a.pickupLocation?.city === userLocation.city;
-        const bIsUserCity = b.pickupLocation?.city === userLocation.city;
+        const aIsUserCity = a.pickup_location?.city === userLocation.city;
+        const bIsUserCity = b.pickup_location?.city === userLocation.city;
         const aIsUserDistrict =
-          a.pickupLocation?.district === userLocation.district;
+          a.pickup_location?.district === userLocation.district;
         const bIsUserDistrict =
-          b.pickupLocation?.district === userLocation.district;
+          b.pickup_location?.district === userLocation.district;
 
         // Prioritize: same city > same district > others
         if (aIsUserCity && !bIsUserCity) return -1;
@@ -433,8 +434,21 @@ export default function FindFood() {
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                 {filteredAndSortedListings.map((listing: any) => {
                   // fill in category/donor for each listing
-                  const displayCategory = getCategoryObj(listing.category);
+                  const displayCategory = getCategoryObj(
+                    listing.category_id || listing.category
+                  );
                   const displayDonor = getDonorObj(listing.donor);
+
+                  // Normalize the data structure for FoodCard
+                  const normalizedListing = {
+                    ...listing,
+                    category: displayCategory,
+                    donor: displayDonor,
+                    pickupLocation: listing.pickup_location, // Map pickup_location to pickupLocation
+                    expiryDate: listing.expiry_date, // Map expiry_date to expiryDate
+                    images: listing.image_urls || [], // Map image_urls to images
+                    deliveryRequested: listing.delivery_requested, // Map delivery_requested to deliveryRequested
+                  };
 
                   // use spread to include them in FoodCard:
                   return (
@@ -442,11 +456,7 @@ export default function FindFood() {
                       key={listing.id}
                       foodCategories={foodCategories}
                       users={users}
-                      listing={{
-                        ...listing,
-                        category: displayCategory,
-                        donor: displayDonor,
-                      }}
+                      listing={normalizedListing}
                       onClaim={() => handleClaim(listing)}
                       onRequest={() => handleRequest(listing)}
                       onDelivery={() => handleDelivery(listing)}

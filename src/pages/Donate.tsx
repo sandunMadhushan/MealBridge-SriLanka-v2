@@ -77,9 +77,9 @@ export default function Donate() {
     async function getCategories() {
       try {
         const { data, error } = await supabase
-          .from('food_categories')
-          .select('*');
-        
+          .from("food_categories")
+          .select("*");
+
         if (error) throw error;
         setFoodCategories(data || []);
       } catch (err) {
@@ -247,20 +247,56 @@ export default function Donate() {
 
     try {
       let imageUrls: string[] = [];
+
+      // Check if user is authenticated for file uploads
+      if (!user) {
+        throw new Error("You must be logged in to upload images");
+      }
+
+      // Try to upload directly to the bucket (it should exist)
+      // We'll check if the bucket exists by attempting to list files in it
+      try {
+        await supabase.storage.from("food-images").list("", { limit: 1 });
+      } catch (bucketError: any) {
+        console.error("Bucket access error:", bucketError);
+        throw new Error(
+          `Cannot access storage bucket 'food-images'. Please ensure the bucket exists and is public. Error: ${bucketError.message}`
+        );
+      }
+
       for (let img of form.images) {
-        const fileExt = img.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random()}.${fileExt}`;
-        
+        const fileExt = img.name.split(".").pop();
+        const fileName = `${user.id}/${Date.now()}_${Math.random()
+          .toString(36)
+          .substring(7)}.${fileExt}`;
+
         const { error: uploadError } = await supabase.storage
-          .from('food-images')
-          .upload(fileName, img);
-        
-        if (uploadError) throw uploadError;
-        
-        const { data: { publicUrl } } = supabase.storage
-          .from('food-images')
-          .getPublicUrl(fileName);
-        
+          .from("food-images")
+          .upload(fileName, img, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+        if (uploadError) {
+          console.error("Upload error:", uploadError);
+
+          // If it's a bucket not found error, provide specific guidance
+          if (
+            uploadError.message.includes("not found") ||
+            uploadError.message.includes("does not exist")
+          ) {
+            throw new Error(
+              "Storage bucket 'food-images' not found. Please ensure the bucket is created in your Supabase project Storage section and is set to public."
+            );
+          }
+
+          throw new Error(`Failed to upload image: ${uploadError.message}`);
+        }
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("food-images").getPublicUrl(fileName);
+
         imageUrls.push(publicUrl);
       }
 
@@ -275,17 +311,21 @@ export default function Donate() {
       if (user) {
         try {
           const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', user.id)
+            .from("users")
+            .select("*")
+            .eq("id", user.id)
             .single();
-          
+
           if (userError) throw userError;
           if (userData) {
             donorInfo = {
               id: user.id,
               email: user.email,
-              name: userData.name || user.user_metadata?.full_name || user.email || "Anonymous",
+              name:
+                userData.name ||
+                user.user_metadata?.full_name ||
+                user.email ||
+                "Anonymous",
               stats: userData.stats || { donationsGiven: 0 },
             };
           } else {
@@ -313,32 +353,31 @@ export default function Donate() {
         };
       }
 
-      const { error } = await supabase
-        .from('food_listings')
-        .insert({
-          title: form.title,
-          description: form.description,
-          category: categoryObj || form.category,
-          quantity: form.quantity,
-          expiry_date: expiry?.toISOString(),
-          pickup_location: {
-            address: form.address,
-            city: form.city,
-            district: form.district,
-          },
-          images: imageUrls,
-          type: form.type,
-          price: form.type === "half-price" ? parseFloat(form.price) : 0,
-          status: "available",
-          created_at: new Date().toISOString(),
-          delivery_requested: form.deliveryAvailable,
-          safety_checklist: form.safetyChecklist,
-          allergen_info: form.allergenInfo,
-          donor: donorInfo,
-        });
-      
-      if (error) throw error;
+      const { error } = await supabase.from("food_listings").insert({
+        donor_id: user?.id || null,
+        title: form.title,
+        description: form.description,
+        category_id: form.category || null,
+        quantity: parseInt(form.quantity) || 1,
+        expiry_date: expiry?.toISOString(),
+        pickup_location: {
+          address: form.address,
+          city: form.city,
+          district: form.district,
+        },
+        image_urls: imageUrls,
+        type: form.type,
+        price: form.type === "half-price" ? parseFloat(form.price) : 0,
+        delivery_requested: form.deliveryAvailable,
+        safety_checklist: form.safetyChecklist,
+        allergen_info: form.allergenInfo,
+        donor: donorInfo,
+        status: "available",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
 
+      if (error) throw error;
 
       setSubmitSuccess("Your food listing has been submitted!");
       setCurrentStep(1);
