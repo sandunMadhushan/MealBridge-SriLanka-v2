@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { cn } from "../utils/cn";
 import { useNavigate, Link } from "react-router-dom";
@@ -67,6 +67,63 @@ export default function Auth() {
       ],
     },
   ];
+
+  // Handle Google OAuth callback
+  useEffect(() => {
+    const handleAuthStateChange = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        // Check if user exists in our users table
+        const { data: existingUser } = await supabase
+          .from("users")
+          .select("id")
+          .eq("id", session.user.id)
+          .single();
+
+        // If user doesn't exist in our users table, they need to complete signup
+        if (!existingUser && session.user.app_metadata?.provider === "google") {
+          setPendingGoogleUser({
+            uid: session.user.id,
+            name:
+              session.user.user_metadata?.full_name ||
+              session.user.user_metadata?.name ||
+              "",
+            email: session.user.email || "",
+          });
+        } else if (existingUser) {
+          // User exists, redirect to appropriate dashboard
+          const { data: userProfile } = await supabase
+            .from("users")
+            .select("role")
+            .eq("id", session.user.id)
+            .single();
+
+          if (userProfile) {
+            const userType = userProfile.role;
+            if (userType === "donor") navigate("/dashboard/donor");
+            else if (userType === "recipient") navigate("/dashboard/recipient");
+            else if (userType === "volunteer") navigate("/dashboard/volunteer");
+          }
+        }
+      }
+    };
+
+    handleAuthStateChange();
+
+    // Listen for auth state changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        handleAuthStateChange();
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
