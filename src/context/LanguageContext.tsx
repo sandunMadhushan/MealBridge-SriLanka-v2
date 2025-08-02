@@ -69,87 +69,6 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
 
           isGoogleTranslateReady = true;
           setIsGoogleTranslateLoaded(true);
-
-          // Add a global function to force reset to English
-          (window as any).resetToEnglish = () => {
-            console.log("🔄 Global resetToEnglish function called");
-
-            // Method 1: Reset combo to empty value
-            const combo = document.querySelector(
-              ".goog-te-combo"
-            ) as HTMLSelectElement;
-            if (combo) {
-              combo.value = "";
-              combo.dispatchEvent(new Event("change", { bubbles: true }));
-              combo.dispatchEvent(new Event("input", { bubbles: true }));
-              console.log("✅ Combo reset to empty value");
-            }
-
-            // Method 2: Remove Google Translate hash from URL
-            const currentUrl = window.location.href;
-            if (currentUrl.includes("#googtrans")) {
-              const cleanUrl = currentUrl.split("#googtrans")[0];
-              window.history.replaceState({}, document.title, cleanUrl);
-              console.log("✅ Removed Google Translate hash from URL");
-            }
-
-            // Method 3: Try to call Google's internal restore function
-            if ((window as any).google?.translate?.TranslateElement) {
-              try {
-                // Look for restore functions in the global scope
-                const restoreFuncs = Object.keys(window).filter(
-                  (key) =>
-                    key.includes("restore") ||
-                    key.includes("orig") ||
-                    key.includes("Original")
-                );
-                restoreFuncs.forEach((funcName) => {
-                  try {
-                    if (typeof (window as any)[funcName] === "function") {
-                      console.log(`🔧 Calling restore function: ${funcName}`);
-                      (window as any)[funcName]();
-                    }
-                  } catch (e) {
-                    // Ignore errors from trying restore functions
-                  }
-                });
-              } catch (error) {
-                // Ignore errors
-              }
-            }
-
-            // Method 4: Click any "Show original" or restore elements
-            const restoreSelectors = [
-              'a[onclick*="restoreOrigText"]',
-              'span[onclick*="restoreOrigText"]',
-              ".goog-te-menu-value span:first-child",
-              'a[href*="javascript:doGoogleLanguageTranslator"]',
-            ];
-
-            restoreSelectors.forEach((selector) => {
-              const element = document.querySelector(selector);
-              if (
-                element &&
-                (element.textContent?.includes("Show original") ||
-                  element.textContent?.includes("English") ||
-                  element.getAttribute("onclick")?.includes("restoreOrigText"))
-              ) {
-                console.log(`🎯 Clicking restore element: ${selector}`);
-                (element as HTMLElement).click();
-              }
-            });
-
-            // Method 5: Force re-initialization as last resort
-            setTimeout(() => {
-              const currentCombo = document.querySelector(
-                ".goog-te-combo"
-              ) as HTMLSelectElement;
-              if (currentCombo && currentCombo.value !== "") {
-                console.log("⚠️ All methods failed, may need page reload");
-                // This will be handled by the calling function
-              }
-            }, 500);
-          };
         } catch (error) {
           console.error("❌ Error initializing Google Translate:", error);
           isGoogleTranslateInitializing = false;
@@ -201,12 +120,12 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
     // Proceed with auto-translation for non-English languages
     const savedLanguage = localStorage.getItem("mealbridge-language");
     if (savedLanguage && savedLanguage !== "en") {
-      console.log(`� Auto-translating to saved language: ${savedLanguage}`);
+      console.log(`🔄 Auto-translating to saved language: ${savedLanguage}`);
       // Align state and trigger translation
       setCurrentLanguage(savedLanguage);
       triggerTranslation(savedLanguage);
     }
-  }, [isGoogleTranslateLoaded, hasInitialTranslation, currentLanguage]);
+  }, [isGoogleTranslateLoaded, hasInitialTranslation]);
 
   const triggerTranslation = (languageCode: string) => {
     if (!isGoogleTranslateReady) {
