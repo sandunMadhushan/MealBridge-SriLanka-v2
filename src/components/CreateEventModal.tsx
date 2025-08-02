@@ -111,6 +111,18 @@ export default function CreateEventModal({
     try {
       let imageUrl = "";
 
+      // Check if event-images bucket exists before uploading
+      if (formData.image) {
+        try {
+          await supabase.storage.from("event-images").list("", { limit: 1 });
+        } catch (bucketError: any) {
+          console.error("Event bucket access error:", bucketError);
+          throw new Error(
+            `Cannot access storage bucket 'event-images'. Please ensure the bucket exists and is public. Error: ${bucketError.message}`
+          );
+        }
+      }
+
       // Upload image if provided
       if (formData.image) {
         const fileExt = formData.image.name.split(".").pop();
@@ -124,7 +136,19 @@ export default function CreateEventModal({
           .upload(filePath, formData.image);
 
         if (uploadError) {
-          throw uploadError;
+          console.error("Event upload error:", uploadError);
+
+          // If it's a bucket not found error, provide specific guidance
+          if (
+            uploadError.message.includes("not found") ||
+            uploadError.message.includes("does not exist")
+          ) {
+            throw new Error(
+              "Storage bucket 'event-images' not found. Please ensure the bucket is created in your Supabase project Storage section and is set to public."
+            );
+          }
+
+          throw new Error(`Failed to upload image: ${uploadError.message}`);
         }
 
         const {

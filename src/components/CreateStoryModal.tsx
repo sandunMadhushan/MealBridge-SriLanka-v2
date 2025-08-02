@@ -127,6 +127,18 @@ export default function CreateStoryModal({
     try {
       const imageUrls: string[] = [...formData.existingImages];
 
+      // Check if story-images bucket exists before uploading
+      if (formData.images.length > 0) {
+        try {
+          await supabase.storage.from("story-images").list("", { limit: 1 });
+        } catch (bucketError: any) {
+          console.error("Story bucket access error:", bucketError);
+          throw new Error(
+            `Cannot access storage bucket 'story-images'. Please ensure the bucket exists and is public. Error: ${bucketError.message}`
+          );
+        }
+      }
+
       // Upload new images if any
       if (formData.images.length > 0) {
         for (const image of formData.images) {
@@ -140,7 +152,21 @@ export default function CreateStoryModal({
             .from("story-images")
             .upload(filePath, image);
 
-          if (uploadError) throw uploadError;
+          if (uploadError) {
+            console.error("Story upload error:", uploadError);
+
+            // If it's a bucket not found error, provide specific guidance
+            if (
+              uploadError.message.includes("not found") ||
+              uploadError.message.includes("does not exist")
+            ) {
+              throw new Error(
+                "Storage bucket 'story-images' not found. Please ensure the bucket is created in your Supabase project Storage section and is set to public."
+              );
+            }
+
+            throw new Error(`Failed to upload image: ${uploadError.message}`);
+          }
 
           const {
             data: { publicUrl },
@@ -158,7 +184,7 @@ export default function CreateStoryModal({
             title: formData.title.trim(),
             content: formData.content.trim(),
             category: formData.category,
-            images: imageUrls,
+            images: imageUrls, // Match DB schema field name
             updated_at: new Date().toISOString(),
           })
           .eq("id", editingStory.id);
@@ -173,12 +199,12 @@ export default function CreateStoryModal({
             title: formData.title.trim(),
             content: formData.content.trim(),
             category: formData.category,
-            images: imageUrls,
+            images: imageUrls, // Match DB schema field name
             author_id: user.id,
             author_name: user.user_metadata?.name || user.email || "Anonymous",
             author_email: user.email,
-            likes: 0,
-            liked_by: [],
+            likes: 0, // Match DB schema field name
+            liked_by: [], // Initialize as empty array
             created_at: new Date().toISOString(),
           });
 
