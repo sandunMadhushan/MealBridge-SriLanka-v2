@@ -8,15 +8,7 @@ import {
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../context/AuthContext";
-import { db } from "../firebase";
-import {
-  collection,
-  addDoc,
-  Timestamp,
-  getDoc,
-  doc,
-  getDocs,
-} from "firebase/firestore";
+import { supabase, TABLES } from "../supabase";
 
 interface DeliveryModalProps {
   isOpen: boolean;
@@ -161,70 +153,106 @@ export default function DeliveryModal({
       );
 
       // Get donor information from the listing
-      const listingDoc = await getDoc(doc(db, "foodListings", listing.id));
-      const listingData = listingDoc.data();
-      const donorId = listingData?.donor?.id;
+      const { data: listingData, error: listingError } = await supabase
+        .from(TABLES.FOOD_LISTINGS)
+        .select("*")
+        .eq("id", listing.id)
+        .single();
+
+      if (listingError) throw listingError;
+
+      const donorId = listingData?.donor_id;
 
       // Create delivery request record
-      const deliveryRef = await addDoc(collection(db, "deliveryRequests"), {
-        listingId: listing.id,
-        requesterId: user.uid,
-        requesterName: user.displayName || user.email,
-        requesterEmail: user.email,
-        deliveryAddress: {
-          address: formData.deliveryAddress,
+      const { data: deliveryData, error: deliveryError } = await supabase
+        .from(TABLES.DELIVERY_REQUESTS)
+        .insert({
+          listing_id: listing.id,
+          requester_id: user.id,
+          requester_name: user.user_metadata?.name || user.email,
+          requester_email: user.email,
+          delivery_address: formData.deliveryAddress,
           city: formData.city,
           district: formData.district,
-          postalCode: formData.postalCode,
-        },
-        deliveryDateTime: Timestamp.fromDate(deliveryDateTime),
-        phone: formData.phone,
-        email: formData.email,
-        specialInstructions: formData.specialInstructions,
-        urgentDelivery: formData.urgentDelivery,
-        deliveryFee: deliveryFee,
-        status: "pending",
-        createdAt: Timestamp.now(),
-      });
+          postal_code: formData.postalCode,
+          delivery_date_time: deliveryDateTime.toISOString(),
+          phone: formData.phone,
+          email: formData.email,
+          special_instructions: formData.specialInstructions,
+          urgent_delivery: formData.urgentDelivery,
+          delivery_fee: deliveryFee,
+          status: "pending",
+          created_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (deliveryError) throw deliveryError;
 
       // Create notification for donor
       if (donorId) {
-        await addDoc(collection(db, "notifications"), {
-          userId: donorId,
-          type: "delivery_request",
-          title: "New Delivery Request",
-          message: `${user.displayName || user.email} requested delivery for: ${
-            listing.title
-          } to ${formData.city}, ${formData.district}`,
-          read: false,
-          createdAt: Timestamp.now(),
-          relatedId: deliveryRef.id,
-        });
+        const { error: notificationError } = await supabase
+          .from(TABLES.NOTIFICATIONS)
+          .insert({
+            user_id: donorId,
+            type: "delivery_request",
+            title: "New Delivery Request",
+            message: `${
+              user.user_metadata?.name || user.email
+            } requested delivery for: ${listing.title} to ${formData.city}, ${
+              formData.district
+            }`,
+            read: false,
+            created_at: new Date().toISOString(),
+            related_id: deliveryData.id,
+          });
+
+        if (notificationError) {
+          console.error(
+            "Failed to create donor notification:",
+            notificationError
+          );
+        }
       }
 
       // Create notifications for volunteers in the same district
-      // Note: In a real app, you'd query volunteers by location
-      const volunteersQuery = collection(db, "users");
-      const volunteersSnapshot = await getDocs(volunteersQuery);
+      const { data: volunteers, error: volunteersError } = await supabase
+        .from(TABLES.USERS)
+        .select("*")
+        .eq("role", "volunteer");
 
-      volunteersSnapshot.docs.forEach(async (volunteerDoc) => {
-        const volunteerData = volunteerDoc.data();
-        if (
-          volunteerData.role === "volunteer" &&
-          (volunteerData.location?.includes(formData.district) ||
-            volunteerData.district === formData.district)
-        ) {
-          await addDoc(collection(db, "notifications"), {
-            userId: volunteerDoc.id,
+      if (volunteersError) {
+        console.error("Failed to fetch volunteers:", volunteersError);
+      } else if (volunteers) {
+        const volunteerNotifications = volunteers
+          .filter(
+            (volunteer) =>
+              volunteer.district === formData.district ||
+              volunteer.location?.includes(formData.district)
+          )
+          .map((volunteer) => ({
+            user_id: volunteer.id,
             type: "delivery_request",
             title: "New Delivery Opportunity",
             message: `Delivery needed in ${formData.district} - Fee: LKR ${deliveryFee}`,
             read: false,
-            createdAt: Timestamp.now(),
-            relatedId: deliveryRef.id,
-          });
+            created_at: new Date().toISOString(),
+            related_id: deliveryData.id,
+          }));
+
+        if (volunteerNotifications.length > 0) {
+          const { error: volunteerNotificationsError } = await supabase
+            .from(TABLES.NOTIFICATIONS)
+            .insert(volunteerNotifications);
+
+          if (volunteerNotificationsError) {
+            console.error(
+              "Failed to create volunteer notifications:",
+              volunteerNotificationsError
+            );
+          }
         }
-      });
+      }
 
       setSuccess(
         "Delivery request submitted successfully! Volunteers in your area will be notified."

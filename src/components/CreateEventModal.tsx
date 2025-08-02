@@ -7,9 +7,7 @@ import {
   UsersIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../context/AuthContext";
-import { db, storage } from "../firebase";
-import { collection, addDoc, Timestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { supabase, TABLES } from "../supabase";
 
 interface CreateEventModalProps {
   isOpen: boolean;
@@ -41,11 +39,31 @@ export default function CreateEventModal({
   });
 
   const districts = [
-    "Ampara", "Anuradhapura", "Badulla", "Batticaloa", "Colombo", "Galle",
-    "Gampaha", "Hambantota", "Jaffna", "Kalutara", "Kandy", "Kegalle",
-    "Kilinochchi", "Kurunegala", "Mannar", "Matale", "Matara", "Monaragala",
-    "Mullaitivu", "Nuwara Eliya", "Polonnaruwa", "Puttalam", "Ratnapura",
-    "Trincomalee", "Vavuniya",
+    "Ampara",
+    "Anuradhapura",
+    "Badulla",
+    "Batticaloa",
+    "Colombo",
+    "Galle",
+    "Gampaha",
+    "Hambantota",
+    "Jaffna",
+    "Kalutara",
+    "Kandy",
+    "Kegalle",
+    "Kilinochchi",
+    "Kurunegala",
+    "Mannar",
+    "Matale",
+    "Matara",
+    "Monaragala",
+    "Mullaitivu",
+    "Nuwara Eliya",
+    "Polonnaruwa",
+    "Puttalam",
+    "Ratnapura",
+    "Trincomalee",
+    "Vavuniya",
   ];
 
   const categories = [
@@ -79,7 +97,12 @@ export default function CreateEventModal({
     }
 
     // Validation
-    if (!formData.title || !formData.description || !formData.date || !formData.time) {
+    if (
+      !formData.title ||
+      !formData.description ||
+      !formData.date ||
+      !formData.time
+    ) {
       setError("Please fill in all required fields.");
       setLoading(false);
       return;
@@ -87,49 +110,73 @@ export default function CreateEventModal({
 
     try {
       let imageUrl = "";
-      
+
       // Upload image if provided
       if (formData.image) {
-        const imageRef = ref(storage, `eventImages/${Date.now()}_${formData.image.name}`);
-        await uploadBytes(imageRef, formData.image);
-        imageUrl = await getDownloadURL(imageRef);
+        const fileExt = formData.image.name.split(".").pop();
+        const fileName = `${Date.now()}_${Math.random()
+          .toString(36)
+          .substring(2)}.${fileExt}`;
+        const filePath = `eventImages/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("event-images")
+          .upload(filePath, formData.image);
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("event-images").getPublicUrl(filePath);
+
+        imageUrl = publicUrl;
       }
 
       const eventDateTime = new Date(`${formData.date}T${formData.time}`);
 
       // Create event document
-      await addDoc(collection(db, "events"), {
+      const { error: eventError } = await supabase.from(TABLES.EVENTS).insert({
         title: formData.title,
         description: formData.description,
-        date: Timestamp.fromDate(eventDateTime),
+        date: eventDateTime.toISOString(),
         location: formData.location,
         city: formData.city,
         district: formData.district,
-        maxAttendees: parseInt(formData.maxAttendees) || 100,
+        max_attendees: parseInt(formData.maxAttendees) || 100,
         category: formData.category,
         image: imageUrl,
-        createdBy: {
-          id: user.uid,
-          name: user.displayName || user.email,
-          email: user.email,
-        },
+        created_by_id: user.id,
+        created_by_name: user.user_metadata?.name || user.email,
+        created_by_email: user.email,
         attendees: [],
-        attendeeCount: 0,
+        attendee_count: 0,
         status: "upcoming",
-        createdAt: Timestamp.now(),
+        created_at: new Date().toISOString(),
       });
+
+      if (eventError) {
+        throw eventError;
+      }
 
       setSuccess("Event created successfully!");
 
       // Create notification for the event creator
-      await addDoc(collection(db, "notifications"), {
-        userId: user.uid,
-        type: "event_created",
-        title: "Event Created Successfully!",
-        message: `Your event "${formData.title}" has been created and is now visible to the community.`,
-        read: false,
-        createdAt: Timestamp.now(),
-      });
+      const { error: notificationError } = await supabase
+        .from(TABLES.NOTIFICATIONS)
+        .insert({
+          user_id: user.id,
+          type: "event_created",
+          title: "Event Created Successfully!",
+          message: `Your event "${formData.title}" has been created and is now visible to the community.`,
+          read: false,
+          created_at: new Date().toISOString(),
+        });
+
+      if (notificationError) {
+        console.error("Failed to create notification:", notificationError);
+      }
 
       onEventCreated();
       setTimeout(() => {
@@ -160,7 +207,9 @@ export default function CreateEventModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
       <div className="w-full max-w-2xl bg-white rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Create New Event</h3>
+          <h3 className="text-lg font-semibold text-gray-900">
+            Create New Event
+          </h3>
           <button
             onClick={onClose}
             className="p-2 text-gray-400 hover:text-gray-600"
@@ -215,7 +264,9 @@ export default function CreateEventModal({
                     type="radio"
                     value={category.id}
                     checked={formData.category === category.id}
-                    onChange={(e) => handleInputChange("category", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("category", e.target.value)
+                    }
                     className="mr-3"
                   />
                   <span className="mr-2">{category.icon}</span>
@@ -313,7 +364,9 @@ export default function CreateEventModal({
               <input
                 type="number"
                 value={formData.maxAttendees}
-                onChange={(e) => handleInputChange("maxAttendees", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("maxAttendees", e.target.value)
+                }
                 placeholder="100"
                 min="1"
                 className="input-field"

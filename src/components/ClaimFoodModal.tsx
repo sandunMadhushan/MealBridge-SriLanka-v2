@@ -7,15 +7,7 @@ import {
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../context/AuthContext";
-import { db } from "../firebase";
-import {
-  collection,
-  addDoc,
-  doc,
-  updateDoc,
-  Timestamp,
-  getDoc,
-} from "firebase/firestore";
+import { supabase, TABLES } from "../supabase";
 
 interface ClaimFoodModalProps {
   isOpen: boolean;
@@ -83,42 +75,69 @@ export default function ClaimFoodModal({
       );
 
       // Get donor information from the listing
-      const listingDoc = await getDoc(doc(db, "foodListings", listing.id));
-      const listingData = listingDoc.data();
-      const donorId = listingData?.donor?.id;
+      const { data: listingData, error: listingError } = await supabase
+        .from(TABLES.FOOD_LISTINGS)
+        .select("*")
+        .eq("id", listing.id)
+        .single();
+
+      if (listingError) throw listingError;
+
+      const donorId = listingData?.donor_id;
+
       // Create claim record
-      const claimRef = await addDoc(collection(db, "foodClaims"), {
-        listingId: listing.id,
-        claimantId: user.uid,
-        claimantName: user.displayName || user.email,
-        claimantEmail: user.email,
-        pickupDateTime: Timestamp.fromDate(pickupDateTime),
-        contactMethod: formData.contactMethod,
-        phone: formData.phone,
-        email: formData.email,
-        notes: formData.notes,
-        status: "pending",
-        createdAt: Timestamp.now(),
-      });
+      const { data: claimData, error: claimError } = await supabase
+        .from(TABLES.FOOD_CLAIMS)
+        .insert({
+          listing_id: listing.id,
+          claimant_id: user.id,
+          claimant_name: user.user_metadata?.name || user.email,
+          claimant_email: user.email,
+          pickup_date_time: pickupDateTime.toISOString(),
+          contact_method: formData.contactMethod,
+          phone: formData.phone,
+          email: formData.email,
+          notes: formData.notes,
+          status: "pending",
+          created_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (claimError) throw claimError;
 
       // Create notification for donor
       if (donorId) {
-        await addDoc(collection(db, "notifications"), {
-          userId: donorId,
-          type: "food_claim",
-          title: "New Food Claim Request",
-          message: `${user.displayName || user.email} wants to claim your food: ${listing.title}`,
-          read: false,
-          createdAt: Timestamp.now(),
-          relatedId: claimRef.id,
-        });
+        const { error: notificationError } = await supabase
+          .from(TABLES.NOTIFICATIONS)
+          .insert({
+            user_id: donorId,
+            type: "food_claim",
+            title: "New Food Claim Request",
+            message: `${
+              user.user_metadata?.name || user.email
+            } wants to claim your food: ${listing.title}`,
+            read: false,
+            created_at: new Date().toISOString(),
+            related_id: claimData.id,
+          });
+
+        if (notificationError) {
+          console.error("Failed to create notification:", notificationError);
+        }
       }
+
       // Update listing status
-      await updateDoc(doc(db, "foodListings", listing.id), {
-        status: "claimed",
-        claimedBy: user.uid,
-        claimedAt: Timestamp.now(),
-      });
+      const { error: updateError } = await supabase
+        .from(TABLES.FOOD_LISTINGS)
+        .update({
+          status: "claimed",
+          claimed_by: user.id,
+          claimed_at: new Date().toISOString(),
+        })
+        .eq("id", listing.id);
+
+      if (updateError) throw updateError;
 
       setSuccess("Food claimed successfully! The donor will be notified.");
       setTimeout(() => {

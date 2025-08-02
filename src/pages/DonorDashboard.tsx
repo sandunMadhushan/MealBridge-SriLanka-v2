@@ -10,16 +10,7 @@ import {
   UsersIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../context/AuthContext";
-import { db } from "../firebase";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  updateDoc,
-  doc,
-  orderBy,
-} from "firebase/firestore";
+import { supabase, TABLES } from "../supabase";
 import { Link } from "react-router-dom";
 import { cn } from "../utils/cn";
 
@@ -81,17 +72,14 @@ export default function DonorDashboard() {
     if (!user) return;
 
     try {
-      const notificationsQuery = query(
-        collection(db, "notifications"),
-        where("userId", "==", user.uid),
-        orderBy("createdAt", "desc")
-      );
-      const notificationsSnapshot = await getDocs(notificationsQuery);
-      const notificationsData = notificationsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setNotifications(notificationsData);
+      const { data: notificationsData, error } = await supabase
+        .from(TABLES.NOTIFICATIONS)
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setNotifications(notificationsData || []);
     } catch (error) {
       console.error("Error fetching notifications:", error);
     }
@@ -101,36 +89,35 @@ export default function DonorDashboard() {
 
     try {
       // Fetch donations
-      const donationsQuery = query(
-        collection(db, "foodListings"),
-        where("donor.id", "==", user.uid)
-      );
-      const donationsSnapshot = await getDocs(donationsQuery);
-      const donationsData = donationsSnapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          status: data.status || "available",
-          title: data.title,
-          quantity: data.quantity,
-          images: data.images,
-          createdAt: data.createdAt,
-          pickupLocation: data.pickupLocation,
-          type: data.type,
-        };
-      });
+      const { data: donationsData, error } = await supabase
+        .from(TABLES.FOOD_LISTINGS)
+        .select("*")
+        .eq("donor_id", user.id);
 
-      setDonations(donationsData);
+      if (error) throw error;
+
+      const processedDonations = (donationsData || []).map((data) => ({
+        id: data.id,
+        status: data.status || "available",
+        title: data.title,
+        quantity: data.quantity,
+        images: data.images,
+        createdAt: data.created_at,
+        pickupLocation: data.pickup_location,
+        type: data.type,
+      }));
+
+      setDonations(processedDonations);
 
       // Calculate stats
-      const totalDonations = donationsData.length;
-      const activeDonations = donationsData.filter(
+      const totalDonations = processedDonations.length;
+      const activeDonations = processedDonations.filter(
         (d) => d.status === "available"
       ).length;
-      const completedDonations = donationsData.filter(
+      const completedDonations = processedDonations.filter(
         (d) => d.status === "completed"
       ).length;
-      const totalMealsShared = donationsData.reduce((sum, d) => {
+      const totalMealsShared = processedDonations.reduce((sum, d) => {
         const servings = parseInt(d.quantity?.match(/\d+/)?.[0] || "1");
         return sum + servings;
       }, 0);
@@ -229,9 +216,13 @@ export default function DonorDashboard() {
     setEditSuccess(null);
     setEditLoading(true);
     try {
-      await updateDoc(doc(db, "foodListings", editDonation.id), {
-        ...editForm,
-      });
+      const { error } = await supabase
+        .from(TABLES.FOOD_LISTINGS)
+        .update(editForm)
+        .eq("id", editDonation.id);
+
+      if (error) throw error;
+
       setEditSuccess("Donation updated successfully");
       await fetchDonorData();
       setTimeout(() => {
@@ -391,7 +382,7 @@ export default function DonorDashboard() {
                 Donor Dashboard
               </h1>
               <p className="text-gray-600">
-                Welcome back, {user?.displayName || user?.email}
+                Welcome back, {user?.user_metadata?.name || user?.email}
               </p>
             </div>
             <Link

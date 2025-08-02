@@ -10,18 +10,7 @@ import {
   CalendarIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../context/AuthContext";
-import { db } from "../firebase";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  doc,
-  updateDoc,
-  getDoc,
-  addDoc,
-  orderBy,
-} from "firebase/firestore";
+import { supabase, TABLES } from "../supabase";
 import { Link } from "react-router-dom";
 import { cn } from "../utils/cn";
 
@@ -80,17 +69,27 @@ export default function VolunteerDashboard() {
     if (!user) return;
 
     try {
-      const notificationsQuery = query(
-        collection(db, "notifications"),
-        where("userId", "==", user.uid),
-        orderBy("createdAt", "desc")
-      );
-      const notificationsSnapshot = await getDocs(notificationsQuery);
-      const notificationsData = notificationsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
+      const { data: notificationsData, error } = await supabase
+        .from(TABLES.NOTIFICATIONS)
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const processedNotifications = (notificationsData || []).map((data) => ({
+        id: data.id,
+        userId: data.user_id,
+        type: data.type,
+        title: data.title,
+        message: data.message,
+        isRead: data.is_read,
+        relatedId: data.related_id,
+        createdAt: data.created_at,
+        ...data,
       }));
-      setNotifications(notificationsData);
+
+      setNotifications(processedNotifications);
     } catch (error) {
       console.error("Error fetching notifications:", error);
     }
@@ -100,36 +99,66 @@ export default function VolunteerDashboard() {
 
     try {
       // Fetch assigned deliveries
-      const deliveriesQuery = query(
-        collection(db, "deliveryRequests"),
-        where("volunteerId", "==", user.uid)
+      const { data: deliveriesData, error: deliveriesError } = await supabase
+        .from(TABLES.DELIVERY_REQUESTS)
+        .select("*")
+        .eq("volunteer_id", user.id);
+
+      if (deliveriesError) throw deliveriesError;
+
+      const processedDeliveries: Delivery[] = (deliveriesData || []).map(
+        (data) => ({
+          id: data.id,
+          volunteerId: data.volunteer_id,
+          status: data.status || "pending",
+          deliveryFee: data.delivery_fee,
+          deliveryAddress: {
+            address: data.delivery_address,
+            city: data.city,
+            district: data.district,
+          },
+          deliveryDateTime: data.delivery_date_time,
+          phone: data.phone,
+          specialInstructions: data.special_instructions,
+          ...data,
+        })
       );
-      const deliveriesSnapshot = await getDocs(deliveriesQuery);
-      const deliveriesData: Delivery[] = deliveriesSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
 
       // Fetch available deliveries (not assigned)
-      const availableQuery = query(
-        collection(db, "deliveryRequests"),
-        where("status", "==", "pending")
+      const { data: availableData, error: availableError } = await supabase
+        .from(TABLES.DELIVERY_REQUESTS)
+        .select("*")
+        .eq("status", "pending")
+        .is("volunteer_id", null);
+
+      if (availableError) throw availableError;
+
+      const processedAvailable: Delivery[] = (availableData || []).map(
+        (data) => ({
+          id: data.id,
+          status: data.status || "pending",
+          deliveryFee: data.delivery_fee,
+          deliveryAddress: {
+            address: data.delivery_address,
+            city: data.city,
+            district: data.district,
+          },
+          deliveryDateTime: data.delivery_date_time,
+          phone: data.phone,
+          specialInstructions: data.special_instructions,
+          ...data,
+        })
       );
-      const availableSnapshot = await getDocs(availableQuery);
-      const availableData: Delivery[] = availableSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
 
-      setDeliveries(deliveriesData);
-      setAvailableDeliveries(availableData.filter((d) => !d.volunteerId));
+      setDeliveries(processedDeliveries);
+      setAvailableDeliveries(processedAvailable);
 
-      // Calculate stats (use fallback "pending" if status is missing)
-      const totalDeliveries = deliveriesData.length;
-      const completedDeliveries = deliveriesData.filter(
+      // Calculate stats
+      const totalDeliveries = processedDeliveries.length;
+      const completedDeliveries = processedDeliveries.filter(
         (d) => (d.status ?? "pending") === "completed"
       ).length;
-      const activeDeliveries = deliveriesData.filter(
+      const activeDeliveries = processedDeliveries.filter(
         (d) => (d.status ?? "pending") === "in-progress"
       ).length;
       const totalHours = completedDeliveries * 1.5;
@@ -180,29 +209,43 @@ export default function VolunteerDashboard() {
 
   const acceptDelivery = async (deliveryId: string) => {
     try {
-      await updateDoc(doc(db, "deliveryRequests", deliveryId), {
-        volunteerId: user?.uid,
-        volunteerName: user?.displayName || user?.email,
-        status: "assigned",
-        assignedAt: new Date(),
-      });
+      const { error: updateError } = await supabase
+        .from(TABLES.DELIVERY_REQUESTS)
+        .update({
+          volunteer_id: user?.id,
+          volunteer_name: user?.user_metadata?.full_name || user?.email,
+          status: "assigned",
+          assigned_at: new Date().toISOString(),
+        })
+        .eq("id", deliveryId);
+
+      if (updateError) throw updateError;
 
       // Get delivery request details to notify the requester
-      const deliveryDoc = await getDoc(doc(db, "deliveryRequests", deliveryId));
-      const deliveryData = deliveryDoc.data();
+      const { data: deliveryData, error: fetchError } = await supabase
+        .from(TABLES.DELIVERY_REQUESTS)
+        .select("*")
+        .eq("id", deliveryId)
+        .single();
 
-      if (deliveryData?.requesterId) {
-        await addDoc(collection(db, "notifications"), {
-          userId: deliveryData.requesterId,
-          type: "delivery_assigned",
-          title: "Volunteer Assigned",
-          message: `${
-            user?.displayName || user?.email
-          } will handle your delivery to ${deliveryData.deliveryAddress?.city}`,
-          read: false,
-          createdAt: new Date(),
-          relatedId: deliveryId,
-        });
+      if (fetchError) throw fetchError;
+
+      if (deliveryData?.requester_id) {
+        const { error: notificationError } = await supabase
+          .from(TABLES.NOTIFICATIONS)
+          .insert({
+            user_id: deliveryData.requester_id,
+            type: "delivery_assigned",
+            title: "Volunteer Assigned",
+            message: `${
+              user?.user_metadata?.full_name || user?.email
+            } will handle your delivery to ${deliveryData.city}`,
+            is_read: false,
+            created_at: new Date().toISOString(),
+            related_id: deliveryId,
+          });
+
+        if (notificationError) throw notificationError;
       }
       fetchVolunteerData();
     } catch (error) {
@@ -212,25 +255,39 @@ export default function VolunteerDashboard() {
 
   const completeDelivery = async (deliveryId: string) => {
     try {
-      await updateDoc(doc(db, "deliveryRequests", deliveryId), {
-        status: "completed",
-        completedAt: new Date(),
-      });
+      const { error: updateError } = await supabase
+        .from(TABLES.DELIVERY_REQUESTS)
+        .update({
+          status: "completed",
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", deliveryId);
+
+      if (updateError) throw updateError;
 
       // Get delivery request details to notify the requester
-      const deliveryDoc = await getDoc(doc(db, "deliveryRequests", deliveryId));
-      const deliveryData = deliveryDoc.data();
+      const { data: deliveryData, error: fetchError } = await supabase
+        .from(TABLES.DELIVERY_REQUESTS)
+        .select("*")
+        .eq("id", deliveryId)
+        .single();
 
-      if (deliveryData?.requesterId) {
-        await addDoc(collection(db, "notifications"), {
-          userId: deliveryData.requesterId,
-          type: "delivery_completed",
-          title: "Delivery Completed",
-          message: `Your food delivery to ${deliveryData.deliveryAddress?.city} has been completed successfully!`,
-          read: false,
-          createdAt: new Date(),
-          relatedId: deliveryId,
-        });
+      if (fetchError) throw fetchError;
+
+      if (deliveryData?.requester_id) {
+        const { error: notificationError } = await supabase
+          .from(TABLES.NOTIFICATIONS)
+          .insert({
+            user_id: deliveryData.requester_id,
+            type: "delivery_completed",
+            title: "Delivery Completed",
+            message: `Your food delivery to ${deliveryData.city} has been completed successfully!`,
+            is_read: false,
+            created_at: new Date().toISOString(),
+            related_id: deliveryId,
+          });
+
+        if (notificationError) throw notificationError;
       }
       fetchVolunteerData();
     } catch (error) {
@@ -303,7 +360,7 @@ export default function VolunteerDashboard() {
                 Volunteer Dashboard
               </h1>
               <p className="text-gray-600">
-                Welcome back, {user?.displayName || user?.email}
+                Welcome back, {user?.user_metadata?.full_name || user?.email}
               </p>
             </div>
             <div className="flex items-center space-x-4">

@@ -14,7 +14,7 @@ import ClaimFoodModal from "../components/ClaimFoodModal";
 import RequestFoodModal from "../components/RequestFoodModal";
 import DeliveryModal from "../components/DeliveryModal";
 import { useAuth } from "../context/AuthContext";
-import { supabase } from "../supabase";
+import { supabase, TABLES } from "../supabase";
 
 export default function Home() {
   const { user } = useAuth();
@@ -25,15 +25,16 @@ export default function Home() {
   const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
   const [selectedListing, setSelectedListing] = useState<any>(null);
 
-  // Load Firestore data for food listings, categories, users, stories (collections)
+  // Load Supabase data for food listings, categories, users, stories (collections)
   const { documents: foodListings = [], loading: listingsLoading } =
-    useCollection("food_listings");
+    useCollection(TABLES.FOOD_LISTINGS);
   const { documents: foodCategories = [], loading: categoriesLoading } =
-    useCollection("food_categories");
-  const { documents: users = [], loading: usersLoading } =
-    useCollection("users");
+    useCollection(TABLES.FOOD_CATEGORIES);
+  const { documents: users = [], loading: usersLoading } = useCollection(
+    TABLES.USERS
+  );
   const { documents: communityStories = [], loading: storiesLoading } =
-    useCollection("community_stories");
+    useCollection(TABLES.COMMUNITY_STORIES);
 
   // --- Fetch impact stats from Supabase stats table ---
   const [impactStats, setImpactStats] = useState({
@@ -49,11 +50,11 @@ export default function Home() {
       setImpactLoading(true);
       try {
         const { data, error } = await supabase
-          .from('stats')
-          .select('*')
-          .eq('type', 'impact')
+          .from("stats")
+          .select("*")
+          .eq("type", "impact")
           .single();
-        
+
         if (error) throw error;
         if (data) {
           setImpactStats({

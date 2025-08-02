@@ -78,36 +78,15 @@ export default function Auth() {
     setSuccess(null);
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
       });
 
       if (error) throw error;
 
-      // Check if user profile exists
-      const { data: userProfile, error: profileError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', data.user?.id)
-        .single();
-
-      if (profileError && profileError.code === 'PGRST116') {
-        // Prompt (modal) for new Google user to complete sign up
-        setPendingGoogleUser({
-          uid: data.user?.id ?? "",
-          name: data.user?.user_metadata?.full_name ?? "",
-          email: data.user?.email ?? "",
-        });
-        setLoading(false);
-      } else {
-        // Existing Google user, route by role
-        const role = userProfile?.role;
-        setLoading(false);
-        if (role === "donor") navigate("/dashboard/donor");
-        else if (role === "recipient") navigate("/dashboard/recipient");
-        else if (role === "volunteer") navigate("/dashboard/volunteer");
-        else setError("Invalid role. Please contact support.");
-      }
+      // After redirect, the user will be signed in and you can handle the rest in a useEffect or a callback route.
+      setLoading(false);
+      setSuccess("Redirecting to Google sign-in...");
     } catch (err: any) {
       setError(err.message || "Google sign-in failed.");
       setLoading(false);
@@ -124,18 +103,16 @@ export default function Auth() {
     setError(null);
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('users')
-        .insert({
-          id: pendingGoogleUser.uid,
-          name: pendingGoogleUser.name,
-          email: pendingGoogleUser.email,
-          role: selectedRole,
-          location: formData.location,
-          phone: formData.phone,
-          verified: true,
-          joined_at: new Date().toISOString(),
-        });
+      const { error } = await supabase.from("users").insert({
+        id: pendingGoogleUser.uid,
+        name: pendingGoogleUser.name,
+        email: pendingGoogleUser.email,
+        role: selectedRole,
+        location: formData.location,
+        phone: formData.phone,
+        verified: true,
+        joined_at: new Date().toISOString(),
+      });
 
       if (error) throw error;
       setPendingGoogleUser(null);
@@ -169,9 +146,9 @@ export default function Auth() {
 
         // Fetch the user profile to get the exact role
         const { data: userProfile, error: profileError } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', data.user.id)
+          .from("users")
+          .select("role")
+          .eq("id", data.user.id)
           .single();
 
         if (profileError) throw profileError;
@@ -199,33 +176,31 @@ export default function Auth() {
           setLoading(false);
           return;
         }
-        
+
         const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
           options: {
             data: {
               full_name: formData.name,
-            }
-          }
+            },
+          },
         });
 
         if (error) throw error;
 
         // Store extra user info in users table
         if (data.user) {
-          const { error: insertError } = await supabase
-            .from('users')
-            .insert({
-              id: data.user.id,
-              name: formData.name,
-              email: formData.email,
-              role: selectedRole,
-              location: formData.location,
-              phone: formData.phone,
-              verified: false,
-              joined_at: new Date().toISOString(),
-            });
+          const { error: insertError } = await supabase.from("users").insert({
+            id: data.user.id,
+            name: formData.name,
+            email: formData.email,
+            role: selectedRole,
+            location: formData.location,
+            phone: formData.phone,
+            verified: false,
+            joined_at: new Date().toISOString(),
+          });
 
           if (insertError) throw insertError;
         }

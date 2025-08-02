@@ -10,8 +10,7 @@ import {
   StarIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../context/AuthContext";
-import { db } from "../firebase";
-import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { supabase, TABLES } from "../supabase";
 import { Link } from "react-router-dom";
 import { cn } from "../utils/cn";
 
@@ -52,17 +51,14 @@ export default function RecipientDashboard() {
     if (!user) return;
 
     try {
-      const notificationsQuery = query(
-        collection(db, "notifications"),
-        where("userId", "==", user.uid),
-        orderBy("createdAt", "desc")
-      );
-      const notificationsSnapshot = await getDocs(notificationsQuery);
-      const notificationsData = notificationsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setNotifications(notificationsData);
+      const { data: notificationsData, error } = await supabase
+        .from(TABLES.NOTIFICATIONS)
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setNotifications(notificationsData || []);
     } catch (error) {
       console.error("Error fetching notifications:", error);
     }
@@ -72,77 +68,79 @@ export default function RecipientDashboard() {
 
     try {
       // Fetch claims
-      const claimsQuery = query(
-        collection(db, "foodClaims"),
-        where("claimantId", "==", user.uid)
-      );
-      const claimsSnapshot = await getDocs(claimsQuery);
-      const claimsData = claimsSnapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          status: data.status || "",
-          createdAt: data.createdAt || null,
-          pickupDateTime: data.pickupDateTime || null,
-          contactMethod: data.contactMethod || "",
-          notes: data.notes || "",
-          ...data,
-        };
-      });
+      const { data: claimsData, error: claimsError } = await supabase
+        .from(TABLES.FOOD_CLAIMS)
+        .select("*")
+        .eq("claimant_id", user.id);
+
+      if (claimsError) throw claimsError;
+
+      const processedClaims = (claimsData || []).map((data) => ({
+        id: data.id,
+        status: data.status || "",
+        createdAt: data.created_at || null,
+        pickupDateTime: data.pickup_date_time || null,
+        contactMethod: data.contact_method || "",
+        notes: data.notes || "",
+        ...data,
+      }));
 
       // Fetch requests
-      const requestsQuery = query(
-        collection(db, "foodRequests"),
-        where("requesterId", "==", user.uid)
-      );
-      const requestsSnapshot = await getDocs(requestsQuery);
-      const requestsData = requestsSnapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          status: data.status || "",
-          createdAt: data.createdAt || null,
-          quantity: data.quantity || 1,
-          totalPrice: data.totalPrice || 0,
-          paymentMethod: data.paymentMethod || "",
-          ...data,
-        };
-      });
+      const { data: requestsData, error: requestsError } = await supabase
+        .from(TABLES.FOOD_REQUESTS)
+        .select("*")
+        .eq("requester_id", user.id);
+
+      if (requestsError) throw requestsError;
+
+      const processedRequests = (requestsData || []).map((data) => ({
+        id: data.id,
+        status: data.status || "",
+        createdAt: data.created_at || null,
+        quantity: data.quantity || 1,
+        totalPrice: data.total_price || 0,
+        paymentMethod: data.payment_method || "",
+        ...data,
+      }));
 
       // Fetch deliveries
-      const deliveriesQuery = query(
-        collection(db, "deliveryRequests"),
-        where("requesterId", "==", user.uid)
-      );
-      const deliveriesSnapshot = await getDocs(deliveriesQuery);
-      const deliveriesData = deliveriesSnapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          status: data.status || "",
-          createdAt: data.createdAt || null,
-          deliveryAddress: data.deliveryAddress || {},
-          deliveryDateTime: data.deliveryDateTime || null,
-          deliveryFee: data.deliveryFee || 0,
-          ...data,
-        };
-      });
+      const { data: deliveriesData, error: deliveriesError } = await supabase
+        .from(TABLES.DELIVERY_REQUESTS)
+        .select("*")
+        .eq("requester_id", user.id);
 
-      setClaims(claimsData);
-      setRequests(requestsData);
-      setDeliveries(deliveriesData);
+      if (deliveriesError) throw deliveriesError;
+
+      const processedDeliveries = (deliveriesData || []).map((data) => ({
+        id: data.id,
+        status: data.status || "",
+        createdAt: data.created_at || null,
+        deliveryAddress: {
+          address: data.delivery_address,
+          city: data.city,
+          district: data.district,
+          postalCode: data.postal_code,
+        },
+        deliveryDateTime: data.delivery_date_time || null,
+        deliveryFee: data.delivery_fee || 0,
+        ...data,
+      }));
+
+      setClaims(processedClaims);
+      setRequests(processedRequests);
+      setDeliveries(processedDeliveries);
 
       // Calculate stats
-      const totalClaims = claimsData.length;
-      const totalRequests = requestsData.length;
-      const completedOrders = [...claimsData, ...requestsData].filter(
+      const totalClaims = processedClaims.length;
+      const totalRequests = processedRequests.length;
+      const completedOrders = [...processedClaims, ...processedRequests].filter(
         (item) => item.status === "completed"
       ).length;
 
       const totalMealsReceived =
-        requestsData.reduce((sum, req) => sum + (req.quantity || 1), 0) +
-        claimsData.length;
-      const moneySaved = requestsData.reduce(
+        processedRequests.reduce((sum, req) => sum + (req.quantity || 1), 0) +
+        processedClaims.length;
+      const moneySaved = processedRequests.reduce(
         (sum, req) => sum + (req.totalPrice || 0),
         0
       );
@@ -216,7 +214,7 @@ export default function RecipientDashboard() {
                 Recipient Dashboard
               </h1>
               <p className="text-gray-600">
-                Welcome back, {user?.displayName || user?.email}
+                Welcome back, {user?.user_metadata?.full_name || user?.email}
               </p>
             </div>
             <Link

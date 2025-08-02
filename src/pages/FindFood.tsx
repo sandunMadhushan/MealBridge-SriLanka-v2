@@ -11,6 +11,7 @@ import ClaimFoodModal from "../components/ClaimFoodModal";
 import RequestFoodModal from "../components/RequestFoodModal";
 import DeliveryModal from "../components/DeliveryModal";
 import { useAuth } from "../context/AuthContext";
+import { TABLES } from "../supabase";
 
 export default function FindFood() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -34,11 +35,12 @@ export default function FindFood() {
 
   // LIVE DATA
   const { documents: foodListings = [], loading: listingsLoading } =
-    useCollection("foodListings");
+    useCollection(TABLES.FOOD_LISTINGS);
   const { documents: foodCategories = [], loading: categoriesLoading } =
-    useCollection("foodCategories");
-  const { documents: users = [], loading: usersLoading } =
-    useCollection("users");
+    useCollection(TABLES.FOOD_CATEGORIES);
+  const { documents: users = [], loading: usersLoading } = useCollection(
+    TABLES.USERS
+  );
 
   // Get unique locations from food listings
   const locations = useMemo(() => {
@@ -288,7 +290,7 @@ export default function FindFood() {
             <div className="text-lg text-gray-600">
               <p>Discover fresh surplus food from your community</p>
               {userLocation && (
-                <p className="text-sm text-primary-600 mt-1">
+                <p className="mt-1 text-sm text-primary-600">
                   📍 Showing results near {userLocation.city},{" "}
                   {userLocation.district}
                 </p>

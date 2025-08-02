@@ -7,8 +7,7 @@ import {
   DevicePhoneMobileIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../context/AuthContext";
-import { db } from "../firebase";
-import { collection, addDoc, Timestamp, getDoc, doc } from "firebase/firestore";
+import { supabase, TABLES } from "../supabase";
 
 interface RequestFoodModalProps {
   isOpen: boolean;
@@ -74,37 +73,60 @@ export default function RequestFoodModal({
       );
 
       // Get donor information from the listing
-      const listingDoc = await getDoc(doc(db, "foodListings", listing.id));
-      const listingData = listingDoc.data();
-      const donorId = listingData?.donor?.id;
+      const { data: listingData, error: listingError } = await supabase
+        .from(TABLES.FOOD_LISTINGS)
+        .select("*")
+        .eq("id", listing.id)
+        .single();
+
+      if (listingError) throw listingError;
+
+      const donorId = listingData?.donor_id;
+
       // Create request record
-      const requestRef = await addDoc(collection(db, "foodRequests"), {
-        listingId: listing.id,
-        requesterId: user.uid,
-        requesterName: user.displayName || user.email,
-        requesterEmail: user.email,
-        quantity: parseInt(formData.quantity),
-        totalPrice: totalPrice,
-        pickupDateTime: Timestamp.fromDate(pickupDateTime),
-        paymentMethod: formData.paymentMethod,
-        phone: formData.phone,
-        email: formData.email,
-        notes: formData.notes,
-        status: "pending",
-        createdAt: Timestamp.now(),
-      });
+      const { data: requestData, error: requestError } = await supabase
+        .from(TABLES.FOOD_REQUESTS)
+        .insert({
+          listing_id: listing.id,
+          requester_id: user.id,
+          requester_name: user.user_metadata?.name || user.email,
+          requester_email: user.email,
+          quantity: parseInt(formData.quantity),
+          total_price: totalPrice,
+          pickup_date_time: pickupDateTime.toISOString(),
+          payment_method: formData.paymentMethod,
+          phone: formData.phone,
+          email: formData.email,
+          notes: formData.notes,
+          status: "pending",
+          created_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (requestError) throw requestError;
 
       // Create notification for donor
       if (donorId) {
-        await addDoc(collection(db, "notifications"), {
-          userId: donorId,
-          type: "food_request",
-          title: "New Food Purchase Request",
-          message: `${user.displayName || user.email} wants to buy your food: ${listing.title} (${formData.quantity} servings for LKR ${totalPrice})`,
-          read: false,
-          createdAt: Timestamp.now(),
-          relatedId: requestRef.id,
-        });
+        const { error: notificationError } = await supabase
+          .from(TABLES.NOTIFICATIONS)
+          .insert({
+            user_id: donorId,
+            type: "food_request",
+            title: "New Food Purchase Request",
+            message: `${
+              user.user_metadata?.name || user.email
+            } wants to buy your food: ${listing.title} (${
+              formData.quantity
+            } servings for LKR ${totalPrice})`,
+            read: false,
+            created_at: new Date().toISOString(),
+            related_id: requestData.id,
+          });
+
+        if (notificationError) {
+          console.error("Failed to create notification:", notificationError);
+        }
       }
       setSuccess("Request submitted successfully! The donor will be notified.");
       setTimeout(() => {

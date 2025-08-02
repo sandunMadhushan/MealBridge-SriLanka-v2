@@ -12,38 +12,30 @@ import CreateEventModal from "../components/CreateEventModal";
 import CreateStoryModal from "../components/CreateStoryModal";
 import { cn } from "../utils/cn";
 
-// Firebase
+// Supabase
 import useCollection from "../hooks/useCollection";
 import { useAuth } from "../context/AuthContext";
-import { db } from "../firebase";
-import {
-  doc,
-  updateDoc,
-  arrayUnion,
-  arrayRemove,
-  increment,
-  addDoc,
-  collection,
-} from "firebase/firestore";
+import { supabase, TABLES } from "../supabase";
 
 export default function Community() {
   const { user } = useAuth();
 
-  // Hooks to fetch Firestore collections with refresh functionality
+  // Hooks to fetch Supabase collections with refresh functionality
   const {
     documents: communityStories = [],
     loading: storiesLoading,
     refresh: refreshStories,
-  } = useCollection("communityStories");
+  } = useCollection(TABLES.COMMUNITY_STORIES);
 
-  const { documents: users = [], loading: usersLoading } =
-    useCollection("users");
+  const { documents: users = [], loading: usersLoading } = useCollection(
+    TABLES.USERS
+  );
 
   const {
     documents: events = [],
     loading: eventsLoading,
     refresh: refreshEvents,
-  } = useCollection("events");
+  } = useCollection(TABLES.EVENTS);
 
   const [activeTab, setActiveTab] = useState("stories");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -128,61 +120,97 @@ export default function Community() {
     setJoinLoading(eventId);
     try {
       const event = events.find((e: any) => e.id === eventId);
-      const isAlreadyJoined = event?.attendees?.includes(user.uid);
+      const currentAttendees = event?.attendees || [];
+      const isAlreadyJoined = currentAttendees.includes(user.id);
 
       if (isAlreadyJoined) {
         // Leave event
-        await updateDoc(doc(db, "events", eventId), {
-          attendees: arrayRemove(user.uid),
-          attendeeCount: increment(-1),
-        });
+        const updatedAttendees = currentAttendees.filter(
+          (id: string) => id !== user.id
+        );
+        const { error: updateError } = await supabase
+          .from(TABLES.EVENTS)
+          .update({
+            attendees: updatedAttendees,
+            attendee_count: Math.max(0, (event.attendee_count || 0) - 1),
+          })
+          .eq("id", eventId);
+
+        if (updateError) throw updateError;
 
         // Create notification for event creator
-        if (event.createdBy?.id && event.createdBy.id !== user.uid) {
-          await addDoc(collection(db, "notifications"), {
-            userId: event.createdBy.id,
-            type: "event_left",
-            title: "Someone Left Your Event",
-            message: `${user.displayName || user.email} left your event: ${
-              event.title
-            }`,
-            read: false,
-            createdAt: new Date(),
-            relatedId: eventId,
-          });
+        if (event.created_by_id && event.created_by_id !== user.id) {
+          const { error: notificationError } = await supabase
+            .from(TABLES.NOTIFICATIONS)
+            .insert({
+              user_id: event.created_by_id,
+              type: "event_left",
+              title: "Someone Left Your Event",
+              message: `${
+                user.user_metadata?.name || user.email
+              } left your event: ${event.title}`,
+              read: false,
+              created_at: new Date().toISOString(),
+              related_id: eventId,
+            });
+
+          if (notificationError) {
+            console.error("Failed to create notification:", notificationError);
+          }
         }
       } else {
         // Join event
-        await updateDoc(doc(db, "events", eventId), {
-          attendees: arrayUnion(user.uid),
-          attendeeCount: increment(1),
-        });
+        const updatedAttendees = [...currentAttendees, user.id];
+        const { error: updateError } = await supabase
+          .from(TABLES.EVENTS)
+          .update({
+            attendees: updatedAttendees,
+            attendee_count: (event.attendee_count || 0) + 1,
+          })
+          .eq("id", eventId);
+
+        if (updateError) throw updateError;
 
         // Create notification for event creator
-        if (event.createdBy?.id && event.createdBy.id !== user.uid) {
-          await addDoc(collection(db, "notifications"), {
-            userId: event.createdBy.id,
-            type: "event_joined",
-            title: "New Event Attendee!",
-            message: `${user.displayName || user.email} joined your event: ${
-              event.title
-            }`,
-            read: false,
-            createdAt: new Date(),
-            relatedId: eventId,
-          });
+        if (event.created_by_id && event.created_by_id !== user.id) {
+          const { error: notificationError } = await supabase
+            .from(TABLES.NOTIFICATIONS)
+            .insert({
+              user_id: event.created_by_id,
+              type: "event_joined",
+              title: "New Event Attendee!",
+              message: `${
+                user.user_metadata?.name || user.email
+              } joined your event: ${event.title}`,
+              read: false,
+              created_at: new Date().toISOString(),
+              related_id: eventId,
+            });
+
+          if (notificationError) {
+            console.error("Failed to create notification:", notificationError);
+          }
         }
 
         // Create notification for the user who joined
-        await addDoc(collection(db, "notifications"), {
-          userId: user.uid,
-          type: "event_joined_confirmation",
-          title: "Event Joined Successfully!",
-          message: `You have successfully joined: ${event.title}`,
-          read: false,
-          createdAt: new Date(),
-          relatedId: eventId,
-        });
+        const { error: joinNotificationError } = await supabase
+          .from(TABLES.NOTIFICATIONS)
+          .insert({
+            user_id: user.id,
+            type: "event_joined_confirmation",
+            title: "Event Joined Successfully!",
+            message: `You have successfully joined: ${event.title}`,
+            read: false,
+            created_at: new Date().toISOString(),
+            related_id: eventId,
+          });
+
+        if (joinNotificationError) {
+          console.error(
+            "Failed to create join notification:",
+            joinNotificationError
+          );
+        }
       }
 
       // Refresh events after join/leave

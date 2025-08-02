@@ -9,18 +9,7 @@ import {
   CalendarIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../context/AuthContext";
-import { db } from "../firebase";
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
-  doc,
-  updateDoc,
-  getDoc,
-  addDoc,
-} from "firebase/firestore";
+import { supabase, TABLES } from "../supabase";
 import { cn } from "../utils/cn";
 
 interface Notification {
@@ -58,33 +47,54 @@ export default function NotificationCenter() {
   useEffect(() => {
     if (!user) return;
 
-    const notificationsQuery = query(
-      collection(db, "notifications"),
-      where("userId", "==", user.uid),
-      orderBy("createdAt", "desc")
-    );
+    const fetchNotifications = async () => {
+      const { data, error } = await supabase
+        .from(TABLES.NOTIFICATIONS)
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
-    const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
-      const notificationData = snapshot.docs.map(
-        (doc) =>
-          ({
-            id: doc.id,
-            ...doc.data(),
-          } as Notification)
-      );
-      setNotifications(notificationData);
-    });
+      if (error) {
+        console.error("Error fetching notifications:", error);
+      } else {
+        setNotifications(data || []);
+      }
+    };
 
-    return () => unsubscribe();
+    fetchNotifications();
+
+    // Set up real-time subscription
+    const subscription = supabase
+      .channel("notifications")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: TABLES.NOTIFICATIONS,
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [user]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const markAsRead = async (notificationId: string) => {
     try {
-      await updateDoc(doc(db, "notifications", notificationId), {
-        read: true,
-      });
+      const { error } = await supabase
+        .from(TABLES.NOTIFICATIONS)
+        .update({ read: true })
+        .eq("id", notificationId);
+
+      if (error) throw error;
     } catch (error) {
       console.error("Error marking notification as read:", error);
     }
@@ -103,25 +113,31 @@ export default function NotificationCenter() {
       try {
         let details = null;
         if (notification.type === "food_request") {
-          const requestDoc = await getDoc(
-            doc(db, "foodRequests", notification.relatedId)
-          );
-          if (requestDoc.exists()) {
-            details = { id: requestDoc.id, ...requestDoc.data() };
+          const { data, error } = await supabase
+            .from(TABLES.FOOD_REQUESTS)
+            .select("*")
+            .eq("id", notification.relatedId)
+            .single();
+          if (!error && data) {
+            details = data;
           }
         } else if (notification.type === "food_claim") {
-          const claimDoc = await getDoc(
-            doc(db, "foodClaims", notification.relatedId)
-          );
-          if (claimDoc.exists()) {
-            details = { id: claimDoc.id, ...claimDoc.data() };
+          const { data, error } = await supabase
+            .from(TABLES.FOOD_CLAIMS)
+            .select("*")
+            .eq("id", notification.relatedId)
+            .single();
+          if (!error && data) {
+            details = data;
           }
         } else if (notification.type === "delivery_request") {
-          const deliveryDoc = await getDoc(
-            doc(db, "deliveryRequests", notification.relatedId)
-          );
-          if (deliveryDoc.exists()) {
-            details = { id: deliveryDoc.id, ...deliveryDoc.data() };
+          const { data, error } = await supabase
+            .from(TABLES.DELIVERY_REQUESTS)
+            .select("*")
+            .eq("id", notification.relatedId)
+            .single();
+          if (!error && data) {
+            details = data;
           }
         }
         setRequestDetails(details);
@@ -137,23 +153,26 @@ export default function NotificationCenter() {
 
     setLoading(true);
     try {
-      let collectionName = "";
+      let tableName = "";
       if (selectedNotification.type === "food_request") {
-        collectionName = "foodRequests";
+        tableName = TABLES.FOOD_REQUESTS;
       } else if (selectedNotification.type === "food_claim") {
-        collectionName = "foodClaims";
+        tableName = TABLES.FOOD_CLAIMS;
       } else if (selectedNotification.type === "delivery_request") {
-        collectionName = "deliveryRequests";
+        tableName = TABLES.DELIVERY_REQUESTS;
       }
 
       // Update request status
-      await updateDoc(doc(db, collectionName, requestDetails.id), {
-        status: "accepted",
-      });
+      const { error: updateError } = await supabase
+        .from(tableName)
+        .update({ status: "accepted" })
+        .eq("id", requestDetails.id);
+
+      if (updateError) throw updateError;
 
       // Create notification for requester
       await createNotification(
-        requestDetails.requesterId || requestDetails.claimantId,
+        requestDetails.requester_id || requestDetails.claimant_id,
         "request_accepted",
         "Request Accepted!",
         `Your ${selectedNotification.type.replace(
@@ -176,23 +195,26 @@ export default function NotificationCenter() {
 
     setLoading(true);
     try {
-      let collectionName = "";
+      let tableName = "";
       if (selectedNotification.type === "food_request") {
-        collectionName = "foodRequests";
+        tableName = TABLES.FOOD_REQUESTS;
       } else if (selectedNotification.type === "food_claim") {
-        collectionName = "foodClaims";
+        tableName = TABLES.FOOD_CLAIMS;
       } else if (selectedNotification.type === "delivery_request") {
-        collectionName = "deliveryRequests";
+        tableName = TABLES.DELIVERY_REQUESTS;
       }
 
       // Update request status
-      await updateDoc(doc(db, collectionName, requestDetails.id), {
-        status: "declined",
-      });
+      const { error: updateError } = await supabase
+        .from(tableName)
+        .update({ status: "declined" })
+        .eq("id", requestDetails.id);
+
+      if (updateError) throw updateError;
 
       // Create notification for requester
       await createNotification(
-        requestDetails.requesterId || requestDetails.claimantId,
+        requestDetails.requester_id || requestDetails.claimant_id,
         "request_declined",
         "Request Declined",
         `Your ${selectedNotification.type.replace(
@@ -218,15 +240,17 @@ export default function NotificationCenter() {
     relatedId?: string
   ) => {
     try {
-      await addDoc(collection(db, "notifications"), {
-        userId,
+      const { error } = await supabase.from(TABLES.NOTIFICATIONS).insert({
+        user_id: userId,
         type,
         title,
         message,
         read: false,
-        createdAt: new Date(),
-        relatedId,
+        created_at: new Date().toISOString(),
+        related_id: relatedId,
       });
+
+      if (error) throw error;
     } catch (error) {
       console.error("Error creating notification:", error);
     }

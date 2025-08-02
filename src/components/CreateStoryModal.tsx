@@ -7,15 +7,7 @@ import {
   UsersIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../context/AuthContext";
-import { db, storage } from "../firebase";
-import {
-  collection,
-  addDoc,
-  updateDoc,
-  doc,
-  Timestamp,
-} from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { supabase, TABLES } from "../supabase";
 import { cn } from "../utils/cn";
 
 interface CreateStoryModalProps {
@@ -138,42 +130,59 @@ export default function CreateStoryModal({
       // Upload new images if any
       if (formData.images.length > 0) {
         for (const image of formData.images) {
-          const imageRef = ref(
-            storage,
-            `storyImages/${user.uid}_${Date.now()}_${image.name}`
-          );
-          await uploadBytes(imageRef, image);
-          const url = await getDownloadURL(imageRef);
-          imageUrls.push(url);
+          const fileExt = image.name.split(".").pop();
+          const fileName = `${user.id}_${Date.now()}_${Math.random()
+            .toString(36)
+            .substring(2)}.${fileExt}`;
+          const filePath = `storyImages/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from("story-images")
+            .upload(filePath, image);
+
+          if (uploadError) throw uploadError;
+
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from("story-images").getPublicUrl(filePath);
+
+          imageUrls.push(publicUrl);
         }
       }
 
       if (editingStory?.id) {
         // Update existing story document
-        await updateDoc(doc(db, "communityStories", editingStory.id), {
-          title: formData.title.trim(),
-          content: formData.content.trim(),
-          category: formData.category,
-          images: imageUrls,
-          updatedAt: Timestamp.now(),
-        });
+        const { error: updateError } = await supabase
+          .from(TABLES.COMMUNITY_STORIES)
+          .update({
+            title: formData.title.trim(),
+            content: formData.content.trim(),
+            category: formData.category,
+            images: imageUrls,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", editingStory.id);
+
+        if (updateError) throw updateError;
         setSuccess("Your story has been successfully updated!");
       } else {
         // Create new story document
-        await addDoc(collection(db, "communityStories"), {
-          title: formData.title.trim(),
-          content: formData.content.trim(),
-          category: formData.category,
-          images: imageUrls,
-          author: {
-            id: user.uid,
-            name: user.displayName || user.email || "Anonymous",
-            email: user.email,
-          },
-          likes: 0,
-          likedBy: [],
-          createdAt: Timestamp.now(),
-        });
+        const { error: insertError } = await supabase
+          .from(TABLES.COMMUNITY_STORIES)
+          .insert({
+            title: formData.title.trim(),
+            content: formData.content.trim(),
+            category: formData.category,
+            images: imageUrls,
+            author_id: user.id,
+            author_name: user.user_metadata?.name || user.email || "Anonymous",
+            author_email: user.email,
+            likes: 0,
+            liked_by: [],
+            created_at: new Date().toISOString(),
+          });
+
+        if (insertError) throw insertError;
         setSuccess("Your story has been shared with the community!");
       }
 
@@ -296,7 +305,7 @@ export default function CreateStoryModal({
                 {formData.existingImages.map((url, idx) => (
                   <div
                     key={idx}
-                    className="relative w-24 h-24 rounded overflow-hidden cursor-pointer border border-gray-300"
+                    className="relative w-24 h-24 overflow-hidden border border-gray-300 rounded cursor-pointer"
                   >
                     <img
                       src={url}
@@ -306,7 +315,7 @@ export default function CreateStoryModal({
                     <button
                       type="button"
                       onClick={() => handleRemoveExistingImage(idx)}
-                      className="absolute top-0 right-0 bg-white rounded-bl px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
+                      className="absolute top-0 right-0 px-2 py-1 text-xs font-medium text-red-600 bg-white rounded-bl hover:bg-red-100"
                       aria-label="Remove image"
                     >
                       ×
@@ -323,7 +332,7 @@ export default function CreateStoryModal({
               Add Photos (Optional)
             </label>
             <div
-              className="p-6 text-center transition-colors border-2 border-gray-300 border-dashed rounded-lg hover:border-primary-400 cursor-pointer"
+              className="p-6 text-center transition-colors border-2 border-gray-300 border-dashed rounded-lg cursor-pointer hover:border-primary-400"
               onClick={() => document.getElementById("story-images")?.click()}
               style={{ minHeight: 70 }}
             >
