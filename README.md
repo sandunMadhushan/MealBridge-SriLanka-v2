@@ -85,8 +85,8 @@ To change language, simply click the language selector (🌐) in the header and 
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/sandunMadhushan/mealbridge-bolt.git
-cd mealbridge-bolt
+git clone https://github.com/sandunMadhushan/MealBridge-SriLanka-v2.git
+cd MealBridge-SriLanka-v2
 ```
 
 2. **Set environment variables**
